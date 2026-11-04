@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>E-Voting OSIS - Aplikasi Pemilihan Ketua OSIS</title>
+  <title>E-Voting OSIS - SMPN 12 Banjarbaru</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Font Awesome Icons -->
@@ -26,7 +26,7 @@
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
 
   <!-- TOP NAVIGATION BAR -->
-  <header class="bg-indigo-700 text-white shadow-md">
+  <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center font-bold text-xl">
@@ -66,7 +66,7 @@
           <div>
             <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Kode Token Pemilih</label>
             <div class="relative">
-              <input type="text" id="inputToken" placeholder="Contoh: SISWA1" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-center text-lg font-mono font-bold tracking-widest focus:ring-2 focus:ring-indigo-500 focus:outline-none uppercase">
+              <input type="text" id="inputToken" placeholder="Contoh: SISWA1" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-center text-lg font-mono font-bold tracking-widest focus:ring-2 focus:ring-indigo-500 focus:outline-none uppercase" onkeypress="if(event.key === 'Enter') loginVoter()">
             </div>
             <p class="text-[11px] text-slate-400 mt-2 text-center">Terhubung ke Database Cloud Supabase (Realtime Sync)</p>
           </div>
@@ -85,7 +85,7 @@
             </div>
             <div>
               <p class="text-xs text-slate-400 font-semibold">Identitas Pemilih</p>
-              <h3 id="voterNameDisplay" class="font-bold text-slate-800">Ahmad Rizky (Kelas XI IPA 1)</h3>
+              <h3 id="voterNameDisplay" class="font-bold text-slate-800">-</h3>
             </div>
           </div>
           <button onclick="logoutVoter()" class="text-xs text-red-600 hover:text-red-700 font-semibold bg-red-50 px-3 py-2 rounded-lg border border-red-100 self-start sm:self-auto">
@@ -110,7 +110,7 @@
           <i class="fa-solid fa-circle-check"></i>
         </div>
         <h2 class="text-2xl font-bold text-slate-800">Suara Berhasil Terkirim!</h2>
-        <p class="text-slate-600 text-sm">Terima kasih telah berpartisipasi dalam Pemilihan Ketua OSIS. Token Anda sekarang telah ditutup secara otomatis untuk menjaga kerahasian dan integritas data.</p>
+        <p class="text-slate-600 text-sm">Terima kasih telah berpartisipasi dalam Pemilihan Ketua OSIS SMPN 12 Banjarbaru. Token Anda sekarang telah ditutup secara otomatis untuk menjaga kerahasian dan integritas data.</p>
         <div class="pt-4">
           <button onclick="logoutVoter()" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl text-sm transition-all">
             Kembali ke Halaman Login
@@ -173,7 +173,7 @@
               <h3 class="font-bold text-lg text-slate-800">Quick Count Real-Time</h3>
               <p class="text-xs text-slate-400">Hasil Perolehan Suara Pasangan Calon Ketua & Wakil Ketua OSIS</p>
             </div>
-            <button onclick="renderAdminChart()" class="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-semibold">
+            <button onclick="fetchCandidates(); fetchVoters();" class="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-semibold">
               <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh Data
             </button>
           </div>
@@ -199,7 +199,7 @@
           <div class="space-y-3 pt-2">
             <label class="block text-xs font-bold text-slate-500 uppercase">Aksi Cepat Data</label>
             <button onclick="resetAllVotes()" class="w-full py-2.5 px-4 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 font-bold text-xs rounded-xl flex items-center justify-center gap-2">
-              <i class="fa-solid fa-trash-arrow-up"></i> Reset Seluruh Suara (Demo)
+              <i class="fa-solid fa-trash-arrow-up"></i> Reset Seluruh Suara
             </button>
           </div>
         </div>
@@ -243,7 +243,7 @@
   
   <!-- MODAL VISI MISI -->
   <div id="modalVisiMisi" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl animate-fade-in">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b pb-3">
         <h3 id="modalPaslonTitle" class="font-bold text-lg text-slate-800">Detail Paslon</h3>
         <button onclick="closeModal('modalVisiMisi')" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
@@ -294,7 +294,7 @@
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">Kelas</label>
-          <input type="text" id="newVoterClass" placeholder="Contoh: X IPA 2" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          <input type="text" id="newVoterClass" placeholder="Contoh: VIII A" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
       </div>
       <div class="flex gap-2 pt-3 justify-end">
@@ -307,16 +307,15 @@
   <!-- JAVASCRIPT LOGIC -->
   <script>
     // ================= CONFIG SUPABASE =================
-    // URL Supabase Anda sudah terisi otomatis di bawah ini:
     const SUPABASE_URL = "https://krdbvdoiplmxknvrjhiz.supabase.co";
-    
-    // GANTI TULISAN DI DALAM TANDA KUTIP DI BAWAH INI DENGAN PUBLISHABLE KEY ANDA:
-    const SUPABASE_ANON_KEY = "sb_publishable_Ctmqkt5eZSNv_yy3ujXo2Q_se72ShKd";
+    const SUPABASE_ANON_KEY = "sb_publishable_Ctmqkt5eZSNv_yy3ujXo2Q_se72S";
     
     // Inisialisasi Supabase Client
-    const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+    const supabase = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) 
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
+      : null;
 
-    // DATA STATE IN-MEMORY (Lokal Fallback & State management)
+    // DATA STATE IN-MEMORY
     let isSessionOpen = true;
     let currentVoter = null;
     let selectedCandidateId = null;
@@ -329,12 +328,10 @@
     window.onload = async function() {
       await fetchCandidates();
       await fetchVoters();
-      updateAdminStats();
       subscribeRealtimeVotes();
     };
 
     // ================= SUPABASE DATABASE API =================
-    // 1. Ambil Data Kandidat dari Supabase
     async function fetchCandidates() {
       if (!supabase) return;
       try {
@@ -353,13 +350,14 @@
         }));
         
         renderCandidates();
-        if (chartInstance) renderAdminChart();
+        if (!document.getElementById('viewAdmin').classList.contains('hidden')) {
+          renderAdminChart();
+        }
       } catch (err) {
         console.error("Gagal mengambil kandidat:", err);
       }
     }
 
-    // 2. Ambil Data Pemilih dari Supabase
     async function fetchVoters() {
       if (!supabase) return;
       try {
@@ -381,18 +379,20 @@
       }
     }
 
-    // 3. Subscription Realtime untuk Quick Count Otomatis
     function subscribeRealtimeVotes() {
       if (!supabase) return;
       supabase
         .channel('public:candidates')
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'candidates' }, () => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'candidates' }, () => {
           fetchCandidates();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'voters' }, () => {
+          fetchVoters();
         })
         .subscribe();
     }
 
-    // ================= SCRIPT INTERAKSI NAVIGASI & MODE =================
+    // ================= SWITCH VIEW (NAVIGASI) =================
     function switchView(view) {
       const btnVoter = document.getElementById('btnViewVoter');
       const btnAdmin = document.getElementById('btnViewAdmin');
@@ -410,10 +410,11 @@
         btnAdmin.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all bg-white text-indigo-700 shadow";
         btnVoter.className = "px-3 py-1.5 text-xs font-semibold text-indigo-200 hover:text-white rounded-lg transition-all";
         renderAdminChart();
+        updateAdminStats();
       }
     }
 
-    // ================= ALUR LOGIK VOTER (PEMILIH) =================
+    // ================= VOTER LOGIC =================
     async function loginVoter() {
       if (!isSessionOpen) {
         showCustomToast("Mohon maaf, sesi pemilihan sedang DITUTUP oleh Panitia.", "warning");
@@ -471,7 +472,7 @@
       container.innerHTML = '';
 
       if (candidates.length === 0) {
-        container.innerHTML = `<div class="col-span-3 text-center py-8 text-slate-400">Belum ada data kandidat. Memuat dari Supabase...</div>`;
+        container.innerHTML = `<div class="col-span-3 text-center py-8 text-slate-400">Belum ada data kandidat. Memuat...</div>`;
         return;
       }
 
@@ -531,7 +532,6 @@
       if (!currentVoter || !selectedCandidateId) return;
 
       if (supabase) {
-        // Eksekusi Stored Procedure submit_vote() yang aman di Supabase
         const { data, error } = await supabase.rpc('submit_vote', {
           voter_token: currentVoter.token,
           target_candidate_id: selectedCandidateId
@@ -554,7 +554,7 @@
       await fetchVoters();
     }
 
-    // ================= ALUR LOGIK ADMIN PANEL =================
+    // ================= ADMIN LOGIC =================
     function updateAdminStats() {
       const total = voters.length;
       const voted = voters.filter(v => v.voted).length;
