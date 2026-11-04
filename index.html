@@ -22,7 +22,7 @@
     }
   </style>
 
-  <!-- GLOBAL CONTROL FUNCTIONS AT HEAD -->
+  <!-- GLOBAL CONTROL FUNCTIONS AT HEAD (INSTANT EXECUTION) -->
   <script>
     function changeTab(target) {
       var viewVoter = document.getElementById('viewVoter');
@@ -70,6 +70,94 @@
         token += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       return token;
+    }
+
+    // GLOBAL DIRECT HANDLERS FOR VOTER CREATION
+    function executeSaveVoter() {
+      var nameEl = document.getElementById('newVoterName');
+      var classEl = document.getElementById('newVoterClass');
+      
+      var name = nameEl ? nameEl.value.trim() : '';
+      var cls = (classEl && classEl.value.trim()) ? classEl.value.trim() : 'SMPN 12';
+
+      if (!name) {
+        alert("Mohon isi Nama Pemilih terlebih dahulu!");
+        return;
+      }
+
+      var generatedToken = generateRandomToken();
+      var newObj = { id: Date.now(), nama: name, kelas: cls, token: generatedToken, voted: false };
+
+      if (window.voters) {
+        window.voters.push(newObj);
+      }
+
+      if (typeof renderVotersTable === 'function') renderVotersTable();
+      if (typeof updateAdminStats === 'function') updateAdminStats();
+
+      closeModal('modalAddVoter');
+      if (nameEl) nameEl.value = '';
+      if (classEl) classEl.value = '';
+
+      alert("BERHASIL DITAMBAHKAN!\n\nNama: " + name + "\nKelas: " + cls + "\nToken: " + generatedToken);
+
+      if (window.supabaseClient) {
+        try {
+          window.supabaseClient.from('voters').insert([{ nama: name, kelas: cls, token: generatedToken, has_voted: false }]).then(function(){});
+        } catch(e){}
+      }
+    }
+
+    function executeBulkImport() {
+      var textarea = document.getElementById('bulkImportInput');
+      var rawText = textarea ? textarea.value.trim() : '';
+
+      if (!rawText) {
+        alert("Teks masukan masih kosong! Salin data dari Excel/Word terlebih dahulu.");
+        return;
+      }
+
+      var lines = rawText.split('\n');
+      var count = 0;
+      var newItems = [];
+
+      for (var i = 0; i < lines.length; i++) {
+        var clean = lines[i].trim();
+        if (!clean) continue;
+
+        var parts = clean.split('\t');
+        if (parts.length < 2) parts = clean.split(',');
+        
+        var nama = parts[0].trim();
+        var kelas = parts[1] ? parts[1].trim() : 'SMPN 12';
+        var token = generateRandomToken();
+
+        if (nama) {
+          var item = { id: Date.now() + i, nama: nama, kelas: kelas, token: token, voted: false };
+          if (window.voters) window.voters.push(item);
+          newItems.push({ nama: nama, kelas: kelas, token: token, has_voted: false });
+          count++;
+        }
+      }
+
+      if (count === 0) {
+        alert("Format data tidak valid!");
+        return;
+      }
+
+      if (typeof renderVotersTable === 'function') renderVotersTable();
+      if (typeof updateAdminStats === 'function') updateAdminStats();
+
+      closeModal('modalImportVoter');
+      if (textarea) textarea.value = '';
+
+      alert("BERHASIL IMPOR!\nTotal " + count + " Pemilih baru telah dibuatkan token otomatis.");
+
+      if (window.supabaseClient && newItems.length > 0) {
+        try {
+          window.supabaseClient.from('voters').insert(newItems).then(function(){});
+        } catch(e){}
+      }
     }
   </script>
 </head>
@@ -355,7 +443,7 @@
       </div>
       <div class="flex gap-2 pt-3 justify-end">
         <button type="button" onclick="closeModal('modalAddVoter')" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer">Batal</button>
-        <button type="button" id="btnSaveVoter" onclick="saveNewVoter()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow cursor-pointer">Simpan & Generate Token</button>
+        <button type="button" id="btnSaveVoter" onclick="executeSaveVoter()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow cursor-pointer">Simpan & Generate Token</button>
       </div>
     </div>
   </div>
@@ -376,7 +464,7 @@
       </div>
       <div class="flex gap-2 pt-3 justify-end">
         <button type="button" onclick="closeModal('modalImportVoter')" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer">Batal</button>
-        <button type="button" id="btnProcessImport" onclick="processBulkImport()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow cursor-pointer">Proses & Import Massal</button>
+        <button type="button" id="btnProcessImport" onclick="executeBulkImport()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow cursor-pointer">Proses & Import Massal</button>
       </div>
     </div>
   </div>
@@ -387,21 +475,21 @@
     const SUPABASE_URL = "https://krdbvdoiplmxknvrjhiz.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_Ctmqkt5eZSNv_yy3ujXo2Q_se72S";
     
-    let supabase = null;
+    window.supabaseClient = null;
     try {
       if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       }
     } catch(e) {
       console.warn("Supabase Init Warning:", e);
     }
 
-    // DATA STATE IN-MEMORY (FALLBACK)
-    let isSessionOpen = true;
-    let currentVoter = null;
-    let selectedCandidateId = null;
+    // DATA STATE IN-MEMORY (GLOBAL)
+    window.isSessionOpen = true;
+    window.currentVoter = null;
+    window.selectedCandidateId = null;
 
-    let candidates = [
+    window.candidates = [
       {
         id: 1,
         noUrut: "01",
@@ -424,7 +512,7 @@
       }
     ];
 
-    let voters = [
+    window.voters = [
       { id: 1, nama: "Ahmad Rizky", kelas: "VIII A", token: "SISWA1", voted: false },
       { id: 2, nama: "Budi Santoso", kelas: "IX B", token: "SISWA2", voted: false },
       { id: 3, nama: "Citra Kirana", kelas: "VII C", token: "SISWA3", voted: false }
@@ -447,12 +535,12 @@
 
     // SUPABASE DATABASE API
     async function fetchCandidates() {
-      if (!supabase) return;
+      if (!window.supabaseClient) return;
       try {
-        const { data, error } = await supabase.from('candidates').select('*').order('no_urut', { ascending: true });
+        const { data, error } = await window.supabaseClient.from('candidates').select('*').order('no_urut', { ascending: true });
         if (error || !data || data.length === 0) return;
         
-        candidates = data.map(c => ({
+        window.candidates = data.map(c => ({
           id: c.id,
           noUrut: c.no_urut.toString().padStart(2, '0'),
           ketua: c.nama_ketua,
@@ -474,12 +562,12 @@
     }
 
     async function fetchVoters() {
-      if (!supabase) return;
+      if (!window.supabaseClient) return;
       try {
-        const { data, error } = await supabase.from('voters').select('*').order('id', { ascending: true });
+        const { data, error } = await window.supabaseClient.from('voters').select('*').order('id', { ascending: true });
         if (error || !data || data.length === 0) return;
         
-        voters = data.map(v => ({
+        window.voters = data.map(v => ({
           id: v.id,
           nama: v.nama,
           kelas: v.kelas,
@@ -495,9 +583,9 @@
     }
 
     function subscribeRealtimeVotes() {
-      if (!supabase) return;
+      if (!window.supabaseClient) return;
       try {
-        supabase
+        window.supabaseClient
           .channel('public:candidates')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'candidates' }, function() { fetchCandidates(); })
           .on('postgres_changes', { event: '*', schema: 'public', table: 'voters' }, function() { fetchVoters(); })
@@ -509,7 +597,7 @@
 
     // VOTER LOGIC
     async function loginVoter() {
-      if (!isSessionOpen) {
+      if (!window.isSessionOpen) {
         showCustomToast("Mohon maaf, sesi pemilihan sedang DITUTUP oleh Panitia.", "warning");
         return;
       }
@@ -522,9 +610,9 @@
 
       let voter = null;
 
-      if (supabase) {
+      if (window.supabaseClient) {
         try {
-          const { data, error } = await supabase.from('voters').select('*').eq('token', inputToken).single();
+          const { data, error } = await window.supabaseClient.from('voters').select('*').eq('token', inputToken).single();
           if (data && !error) {
             voter = { id: data.id, nama: data.nama, kelas: data.kelas, token: data.token, voted: data.has_voted };
           }
@@ -532,7 +620,7 @@
       }
 
       if (!voter) {
-        voter = voters.find(v => v.token === inputToken);
+        voter = window.voters.find(v => v.token === inputToken);
       }
 
       if (!voter) {
@@ -540,7 +628,7 @@
         return;
       }
 
-      currentVoter = voter;
+      window.currentVoter = voter;
 
       if (voter.voted) {
         document.getElementById('voterLoginSection').style.display = 'none';
@@ -555,7 +643,7 @@
     }
 
     function logoutVoter() {
-      currentVoter = null;
+      window.currentVoter = null;
       document.getElementById('inputToken').value = '';
       document.getElementById('voterLoginSection').style.display = 'block';
       document.getElementById('voterVotingSection').style.display = 'none';
@@ -567,7 +655,7 @@
       if (!container) return;
       container.innerHTML = '';
 
-      candidates.forEach(c => {
+      window.candidates.forEach(c => {
         const card = document.createElement('div');
         card.className = "bg-white rounded-2xl border border-slate-200 shadow-md hover:shadow-lg transition-all overflow-hidden flex flex-col";
         card.innerHTML = `
@@ -597,7 +685,7 @@
     }
 
     function openVisiMisiModal(candidateId) {
-      const candidate = candidates.find(c => c.id === candidateId);
+      const candidate = window.candidates.find(c => c.id === candidateId);
       if (!candidate) return;
 
       document.getElementById('modalPaslonTitle').innerText = `Visi & Misi - Paslon No. ${candidate.noUrut}`;
@@ -610,21 +698,21 @@
     }
 
     function confirmVote(candidateId) {
-      selectedCandidateId = candidateId;
-      const candidate = candidates.find(c => c.id === candidateId);
+      window.selectedCandidateId = candidateId;
+      const candidate = window.candidates.find(c => c.id === candidateId);
       document.getElementById('confirmPaslonName').innerText = `No. ${candidate.noUrut} (${candidate.ketua} & ${candidate.wakil})`;
       
       openModal('modalConfirmVote');
     }
 
     async function submitVote() {
-      if (!currentVoter || !selectedCandidateId) return;
+      if (!window.currentVoter || !window.selectedCandidateId) return;
 
-      if (supabase) {
+      if (window.supabaseClient) {
         try {
-          const { data, error } = await supabase.rpc('submit_vote', {
-            voter_token: currentVoter.token,
-            target_candidate_id: selectedCandidateId
+          const { data, error } = await window.supabaseClient.rpc('submit_vote', {
+            voter_token: window.currentVoter.token,
+            target_candidate_id: window.selectedCandidateId
           });
 
           if (error || (data && !data.success)) {
@@ -637,8 +725,8 @@
         }
       }
 
-      currentVoter.voted = true;
-      const cand = candidates.find(c => c.id === selectedCandidateId);
+      window.currentVoter.voted = true;
+      const cand = window.candidates.find(c => c.id === window.selectedCandidateId);
       if (cand) cand.suara += 1;
 
       closeModal('modalConfirmVote');
@@ -652,8 +740,8 @@
 
     // ADMIN LOGIC
     function updateAdminStats() {
-      const total = voters.length;
-      const voted = voters.filter(v => v.voted).length;
+      const total = window.voters.length;
+      const voted = window.voters.filter(v => v.voted).length;
       const notVoted = total - voted;
       const turnout = total > 0 ? ((voted / total) * 100).toFixed(1) : 0;
 
@@ -667,8 +755,8 @@
       const canvas = document.getElementById('quickCountChart');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
-      const labels = candidates.map(c => `Paslon ${c.noUrut}: ${c.ketua.split(' ')[0]}`);
-      const dataSuara = candidates.map(c => c.suara);
+      const labels = window.candidates.map(c => `Paslon ${c.noUrut}: ${c.ketua.split(' ')[0]}`);
+      const dataSuara = window.candidates.map(c => c.suara);
 
       if (chartInstance) {
         chartInstance.destroy();
@@ -707,7 +795,7 @@
       if (!tbody) return;
       tbody.innerHTML = '';
 
-      voters.forEach(v => {
+      window.voters.forEach(v => {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 transition-colors";
         tr.innerHTML = `
@@ -730,11 +818,11 @@
     }
 
     function toggleVotingSession() {
-      isSessionOpen = !isSessionOpen;
+      window.isSessionOpen = !window.isSessionOpen;
       const badge = document.getElementById('sessionStatusBadge');
       const btn = document.getElementById('toggleSessionBtn');
 
-      if (isSessionOpen) {
+      if (window.isSessionOpen) {
         badge.className = "text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700";
         badge.innerText = "SESI DIBUKA";
         btn.innerText = "Tutup Sesi";
@@ -747,119 +835,29 @@
       }
     }
 
-    async function saveNewVoter() {
-      const nameEl = document.getElementById('newVoterName');
-      const classEl = document.getElementById('newVoterClass');
-      
-      const name = nameEl ? nameEl.value.trim() : '';
-      const cls = (classEl && classEl.value.trim()) ? classEl.value.trim() : 'SMPN 12';
-
-      if (!name) {
-        alert("Mohon isi Nama Pemilih!");
-        return;
-      }
-
-      const generatedToken = generateRandomToken();
-      const newObj = { id: Date.now(), nama: name, kelas: cls, token: generatedToken, voted: false };
-
-      // 1. Tambahkan data langsung ke tampilan UI (In-Memory)
-      voters.push(newObj);
-      renderVotersTable();
-      updateAdminStats();
-
-      // 2. Tutup Pop-Up Modal & Reset Input
-      closeModal('modalAddVoter');
-      if (nameEl) nameEl.value = '';
-      if (classEl) classEl.value = '';
-
-      alert(`Pemilih Berhasil Ditambah!\n\nNama: ${name}\nKelas: ${cls}\nToken Otomatis: ${generatedToken}`);
-
-      // 3. Simpan Asinkron ke Supabase Cloud jika terhubung
-      if (supabase) {
-        try {
-          await supabase.from('voters').insert([{ nama: name, kelas: cls, token: generatedToken, has_voted: false }]);
-        } catch(e) {
-          console.warn("Simpan cloud terlayar:", e);
-        }
-      }
-    }
-
-    async function processBulkImport() {
-      const textarea = document.getElementById('bulkImportInput');
-      const rawText = textarea ? textarea.value.trim() : '';
-
-      if (!rawText) {
-        alert("Teks masukan masih kosong! Salin data dari Excel/Word terlebih dahulu.");
-        return;
-      }
-
-      const lines = rawText.split('\n');
-      const newVoters = [];
-
-      lines.forEach((line, idx) => {
-        const clean = line.trim();
-        if (!clean) return;
-
-        let parts = clean.split('\t');
-        if (parts.length < 2) parts = clean.split(',');
-        
-        const nama = parts[0].trim();
-        const kelas = parts[1] ? parts[1].trim() : 'SMPN 12';
-        const token = generateRandomToken();
-
-        if (nama) {
-          const item = { id: Date.now() + idx, nama: nama, kelas: kelas, token: token, voted: false };
-          newVoters.push(item);
-          voters.push(item);
-        }
-      });
-
-      if (newVoters.length === 0) {
-        alert("Format data tidak valid!");
-        return;
-      }
-
-      renderVotersTable();
-      updateAdminStats();
-
-      closeModal('modalImportVoter');
-      if (textarea) textarea.value = '';
-
-      alert(`Berhasil Impor ${newVoters.length} Pemilih dengan Token Otomatis!`);
-
-      if (supabase) {
-        try {
-          const payload = newVoters.map(v => ({ nama: v.nama, kelas: v.kelas, token: v.token, has_voted: false }));
-          await supabase.from('voters').insert(payload);
-        } catch(e) {
-          console.warn("Impor massal cloud error:", e);
-        }
-      }
-    }
-
     async function deleteVoter(id) {
-      if (supabase) {
+      if (window.supabaseClient) {
         try {
-          await supabase.from('voters').delete().eq('id', id);
+          await window.supabaseClient.from('voters').delete().eq('id', id);
           await fetchVoters();
         } catch(e){}
       }
-      voters = voters.filter(v => v.id !== id);
+      window.voters = window.voters.filter(v => v.id !== id);
       renderVotersTable();
       updateAdminStats();
     }
 
     async function resetAllVotes() {
-      if (supabase) {
+      if (window.supabaseClient) {
         try {
-          await supabase.from('candidates').update({ suara_count: 0 }).neq('id', 0);
-          await supabase.from('voters').update({ has_voted: false }).neq('id', 0);
+          await window.supabaseClient.from('candidates').update({ suara_count: 0 }).neq('id', 0);
+          await window.supabaseClient.from('voters').update({ has_voted: false }).neq('id', 0);
           await fetchCandidates();
           await fetchVoters();
         } catch(e){}
       }
-      candidates.forEach(c => c.suara = 0);
-      voters.forEach(v => v.voted = false);
+      window.candidates.forEach(c => c.suara = 0);
+      window.voters.forEach(v => v.voted = false);
       renderCandidates();
       renderVotersTable();
       updateAdminStats();
