@@ -749,7 +749,7 @@
 
     async function saveNewVoter() {
       const name = document.getElementById('newVoterName').value.trim();
-      const cls = document.getElementById('newVoterClass').value.trim() || 'VIII A';
+      const cls = document.getElementById('newVoterClass').value.trim() || 'SMPN 12';
 
       if (!name) {
         showCustomToast("Mohon isi Nama Pemilih!", "error");
@@ -757,16 +757,18 @@
       }
 
       const generatedToken = generateRandomToken();
+      const newObj = { id: Date.now(), nama: name, kelas: cls, token: generatedToken, voted: false };
 
+      // Tambahkan langsung ke memori tampilan
+      voters.push(newObj);
+      renderVotersTable();
+      updateAdminStats();
+
+      // Coba simpan ke Supabase di background tanpa menghalangi UI
       if (supabase) {
         try {
-          await supabase.from('voters').insert([{ nama: name, kelas: cls, token: generatedToken }]);
-          await fetchVoters();
+          supabase.from('voters').insert([{ nama: name, kelas: cls, token: generatedToken }]).then(() => {});
         } catch(e){}
-      } else {
-        voters.push({ id: Date.now(), nama: name, kelas: cls, token: generatedToken, voted: false });
-        renderVotersTable();
-        updateAdminStats();
       }
 
       closeModal('modalAddVoter');
@@ -785,7 +787,7 @@
       const lines = rawText.split('\n');
       const newVoters = [];
 
-      lines.forEach(line => {
+      lines.forEach((line, idx) => {
         const clean = line.trim();
         if (!clean) return;
 
@@ -797,7 +799,9 @@
         const token = generateRandomToken();
 
         if (nama) {
-          newVoters.push({ nama: nama, kelas: kelas, token: token, has_voted: false });
+          const item = { id: Date.now() + idx, nama: nama, kelas: kelas, token: token, voted: false };
+          newVoters.push(item);
+          voters.push(item);
         }
       });
 
@@ -806,17 +810,14 @@
         return;
       }
 
+      renderVotersTable();
+      updateAdminStats();
+
       if (supabase) {
         try {
-          await supabase.from('voters').insert(newVoters);
-          await fetchVoters();
+          const payload = newVoters.map(v => ({ nama: v.nama, kelas: v.kelas, token: v.token, has_voted: false }));
+          supabase.from('voters').insert(payload).then(() => {});
         } catch(e){}
-      } else {
-        newVoters.forEach((v, idx) => {
-          voters.push({ id: Date.now() + idx, nama: v.nama, kelas: v.kelas, token: v.token, voted: false });
-        });
-        renderVotersTable();
-        updateAdminStats();
       }
 
       closeModal('modalImportVoter');
