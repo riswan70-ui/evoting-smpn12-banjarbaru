@@ -22,7 +22,7 @@
     }
   </style>
 
-  <!-- SCRIPT NAVIGASI DARURAT LOKAL (LANGSUNG DIAWAL AGAR TOMBOL PASTI BISA DIKLIK) -->
+  <!-- GLOBAL CONTROL FUNCTIONS AT HEAD -->
   <script>
     function changeTab(target) {
       var viewVoter = document.getElementById('viewVoter');
@@ -47,6 +47,29 @@
           setTimeout(renderAdminChart, 50);
         }
       }
+    }
+
+    function openModal(modalId) {
+      var el = document.getElementById(modalId);
+      if (el) {
+        el.style.display = 'flex';
+      }
+    }
+
+    function closeModal(modalId) {
+      var el = document.getElementById(modalId);
+      if (el) {
+        el.style.display = 'none';
+      }
+    }
+
+    function generateRandomToken() {
+      var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      var token = 'S12-';
+      for (var i = 0; i < 4; i++) {
+        token += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return token;
     }
   </script>
 </head>
@@ -240,11 +263,11 @@
             <p class="text-xs text-slate-400">Kelola token unik dan status memilih siswa</p>
           </div>
           <div class="flex gap-2">
-            <button type="button" onclick="openImportModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer">
+            <button type="button" onclick="openModal('modalImportVoter')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer">
               <i class="fa-solid fa-file-excel me-1"></i> Impor Massal DPT
             </button>
-            <button type="button" onclick="openAddVoterModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer">
-              <i class="fa-solid fa-plus me-1"></i> Tambah Manual
+            <button type="button" onclick="openModal('modalAddVoter')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer">
+              <i class="fa-solid fa-plus me-1"></i> Tambah Pemilih Baru
             </button>
           </div>
         </div>
@@ -316,7 +339,7 @@
   <div id="modalAddVoter" style="display: none;" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b pb-3">
-        <h3 class="font-bold text-lg text-slate-800">Tambah Pemilih (DPT)</h3>
+        <h3 class="font-bold text-lg text-slate-800">Tambah Pemilih Baru</h3>
         <button type="button" onclick="closeModal('modalAddVoter')" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
       </div>
       <div class="space-y-3">
@@ -328,7 +351,7 @@
           <label class="block text-xs font-bold text-slate-500 mb-1">Kelas</label>
           <input type="text" id="newVoterClass" placeholder="Contoh: VIII A" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
-        <p class="text-[11px] text-indigo-600 bg-indigo-50 p-2 rounded-lg"><i class="fa-solid fa-key me-1"></i> Kode Token unik (6 karakter alfanumerik) akan dibuatkan otomatis secara acak oleh sistem.</p>
+        <p class="text-[11px] text-indigo-600 bg-indigo-50 p-2.5 rounded-lg"><i class="fa-solid fa-key me-1"></i> Token unik otomatis (Contoh: S12-K89X) dibuat acak oleh sistem.</p>
       </div>
       <div class="flex gap-2 pt-3 justify-end">
         <button type="button" onclick="closeModal('modalAddVoter')" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer">Batal</button>
@@ -341,15 +364,15 @@
   <div id="modalImportVoter" style="display: none;" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b pb-3">
-        <h3 class="font-bold text-lg text-slate-800">Impor Massal Data DPT</h3>
+        <h3 class="font-bold text-lg text-slate-800">Impor Massal DPT</h3>
         <button type="button" onclick="closeModal('modalImportVoter')" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
       </div>
       <div class="space-y-3">
-        <p class="text-xs text-slate-500">Copy & Paste daftar nama siswa dan kelas langsung dari <strong>Excel</strong> atau <strong>Word</strong> (Format: Nama [tab/koma] Kelas, atau 1 baris per nama):</p>
+        <p class="text-xs text-slate-500">Salin (*Copy*) & Tempel (*Paste*) tabel nama siswa langsung dari **Excel** atau **Word**:</p>
         <div>
-          <textarea id="bulkImportInput" rows="6" placeholder="Contoh format dari Excel:&#10;Ahmad Rizky	VII A&#10;Budi Santoso	VIII B&#10;Citra Kirana	IX C" class="w-full p-3 border rounded-xl text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+          <textarea id="bulkImportInput" rows="6" placeholder="Format otomatis didukung (Excel / Word):&#10;Ahmad Rizky	VII A&#10;Budi Santoso	VIII B&#10;Citra Kirana	IX C" class="w-full p-3 border rounded-xl text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
         </div>
-        <p class="text-[11px] text-emerald-600 bg-emerald-50 p-2.5 rounded-lg"><i class="fa-solid fa-bolt me-1"></i> Sistem akan secara otomatis mengurutkan nama, membaca kelas, dan membuatkan <strong>Token Unik Otomatis</strong> untuk setiap pemilih.</p>
+        <p class="text-[11px] text-emerald-600 bg-emerald-50 p-2.5 rounded-lg"><i class="fa-solid fa-bolt me-1"></i> Setiap siswa yang diimpor akan langsung mendapat <strong>Token Acak Otomatis</strong>.</p>
       </div>
       <div class="flex gap-2 pt-3 justify-end">
         <button type="button" onclick="closeModal('modalImportVoter')" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer">Batal</button>
@@ -583,7 +606,7 @@
       const misiList = document.getElementById('modalMisiList');
       misiList.innerHTML = candidate.misi.map(m => `<li class="py-0.5">${m}</li>`).join('');
 
-      document.getElementById('modalVisiMisi').style.display = 'flex';
+      openModal('modalVisiMisi');
     }
 
     function confirmVote(candidateId) {
@@ -591,7 +614,7 @@
       const candidate = candidates.find(c => c.id === candidateId);
       document.getElementById('confirmPaslonName').innerText = `No. ${candidate.noUrut} (${candidate.ketua} & ${candidate.wakil})`;
       
-      document.getElementById('modalConfirmVote').style.display = 'flex';
+      openModal('modalConfirmVote');
     }
 
     async function submitVote() {
@@ -724,29 +747,9 @@
       }
     }
 
-    function openAddVoterModal() {
-      document.getElementById('newVoterName').value = '';
-      document.getElementById('newVoterClass').value = '';
-      document.getElementById('modalAddVoter').style.display = 'flex';
-    }
-
-    function openImportModal() {
-      document.getElementById('bulkImportInput').value = '';
-      document.getElementById('modalImportVoter').style.display = 'flex';
-    }
-
-    function generateRandomToken() {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let token = 'S12-';
-      for (let i = 0; i < 4; i++) {
-        token += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return token;
-    }
-
     async function saveNewVoter() {
       const name = document.getElementById('newVoterName').value.trim();
-      const cls = document.getElementById('newVoterClass').value.trim() || 'Umum';
+      const cls = document.getElementById('newVoterClass').value.trim() || 'VIII A';
 
       if (!name) {
         showCustomToast("Mohon isi Nama Pemilih!", "error");
@@ -767,7 +770,9 @@
       }
 
       closeModal('modalAddVoter');
-      showCustomToast(`Pemilih berhasil ditambahkan! Token: ${generatedToken}`, "success");
+      document.getElementById('newVoterName').value = '';
+      document.getElementById('newVoterClass').value = '';
+      showCustomToast(`Pemilih Berhasil Ditambah! Token Otomatis: ${generatedToken}`, "success");
     }
 
     async function processBulkImport() {
@@ -792,7 +797,7 @@
         const token = generateRandomToken();
 
         if (nama) {
-          newVoters.push({ nama, kelas, token, has_voted: false });
+          newVoters.push({ nama: nama, kelas: kelas, token: token, has_voted: false });
         }
       });
 
@@ -815,7 +820,8 @@
       }
 
       closeModal('modalImportVoter');
-      showCustomToast(`Berhasil mengimpor ${newVoters.length} pemilih dengan Token Otomatis!`, "success");
+      document.getElementById('bulkImportInput').value = '';
+      showCustomToast(`Berhasil Impor ${newVoters.length} Pemilih dengan Token Otomatis!`, "success");
     }
 
     async function deleteVoter(id) {
@@ -846,13 +852,6 @@
       updateAdminStats();
       if (chartInstance) renderAdminChart();
       showCustomToast("Seluruh perolehan suara dan status pemilih telah di-reset!", "info");
-    }
-
-    function closeModal(modalId) {
-      const modal = document.getElementById(modalId);
-      if (modal) {
-        modal.style.display = 'none';
-      }
     }
 
     function showCustomToast(msg, type = "info") {
