@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -22,6 +21,34 @@
       backdrop-filter: blur(10px);
     }
   </style>
+
+  <!-- SCRIPT NAVIGASI DARURAT LOKAL (LANGSUNG DIAWAL AGAR TOMBOL PASTI BISA DIKLIK) -->
+  <script>
+    function changeTab(target) {
+      var viewVoter = document.getElementById('viewVoter');
+      var viewAdmin = document.getElementById('viewAdmin');
+      var btnVoter = document.getElementById('btnViewVoter');
+      var btnAdmin = document.getElementById('btnViewAdmin');
+
+      if (!viewVoter || !viewAdmin) return;
+
+      if (target === 'voter') {
+        viewVoter.style.display = 'block';
+        viewAdmin.style.display = 'none';
+        btnVoter.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all bg-white text-indigo-700 shadow cursor-pointer";
+        btnAdmin.className = "px-3 py-1.5 text-xs font-semibold text-indigo-200 hover:text-white rounded-lg transition-all cursor-pointer";
+      } else {
+        viewVoter.style.display = 'none';
+        viewAdmin.style.display = 'block';
+        btnAdmin.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all bg-white text-indigo-700 shadow cursor-pointer";
+        btnVoter.className = "px-3 py-1.5 text-xs font-semibold text-indigo-200 hover:text-white rounded-lg transition-all cursor-pointer";
+        
+        if (typeof renderAdminChart === 'function') {
+          setTimeout(renderAdminChart, 50);
+        }
+      }
+    }
+  </script>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
 
@@ -39,10 +66,10 @@
       </div>
       <!-- Mode Toggle Switcher -->
       <div class="flex items-center space-x-2 bg-indigo-900/50 p-1.5 rounded-xl border border-indigo-500/30">
-        <button id="btnViewVoter" onclick="switchView('voter')" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all bg-white text-indigo-700 shadow">
+        <button type="button" id="btnViewVoter" onclick="changeTab('voter')" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all bg-white text-indigo-700 shadow cursor-pointer">
           <i class="fa-solid fa-user me-1"></i> Mode Pemilih
         </button>
-        <button id="btnViewAdmin" onclick="switchView('admin')" class="px-3 py-1.5 text-xs font-semibold text-indigo-200 hover:text-white rounded-lg transition-all">
+        <button type="button" id="btnViewAdmin" onclick="changeTab('admin')" class="px-3 py-1.5 text-xs font-semibold text-indigo-200 hover:text-white rounded-lg transition-all cursor-pointer">
           <i class="fa-solid fa-user-shield me-1"></i> Panel Admin
         </button>
       </div>
@@ -53,7 +80,7 @@
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
     
     <!-- ==================== VIEW 1: PEMILIH (VOTER) ==================== -->
-    <section id="viewVoter" class="block space-y-6">
+    <section id="viewVoter" style="display: block;" class="space-y-6">
 
       <!-- STEP 1: LOGIN TOKEN -->
       <div id="voterLoginSection" class="max-w-md mx-auto my-12 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
@@ -70,14 +97,14 @@
             </div>
             <p class="text-[11px] text-slate-400 mt-2 text-center">Terhubung ke Database Cloud Supabase (Realtime Sync)</p>
           </div>
-          <button onclick="loginVoter()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-[0.99]">
+          <button type="button" onclick="loginVoter()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-[0.99] cursor-pointer">
             Masuk Ke Bilik Suara <i class="fa-solid fa-arrow-right ms-1"></i>
           </button>
         </div>
       </div>
 
       <!-- STEP 2: BILIK SUARA (SURAT SUARA) -->
-      <div id="voterVotingSection" class="hidden space-y-6">
+      <div id="voterVotingSection" style="display: none;" class="space-y-6">
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div class="flex items-center space-x-3">
             <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
@@ -88,7 +115,7 @@
               <h3 id="voterNameDisplay" class="font-bold text-slate-800">-</h3>
             </div>
           </div>
-          <button onclick="logoutVoter()" class="text-xs text-red-600 hover:text-red-700 font-semibold bg-red-50 px-3 py-2 rounded-lg border border-red-100 self-start sm:self-auto">
+          <button type="button" onclick="logoutVoter()" class="text-xs text-red-600 hover:text-red-700 font-semibold bg-red-50 px-3 py-2 rounded-lg border border-red-100 self-start sm:self-auto cursor-pointer">
             <i class="fa-solid fa-right-from-bracket me-1"></i> Keluar
           </button>
         </div>
@@ -105,14 +132,14 @@
       </div>
 
       <!-- STEP 3: STATUS SUDAH MEMILIH / SELESAI -->
-      <div id="voterSuccessSection" class="hidden max-w-lg mx-auto my-12 bg-white p-8 rounded-2xl shadow-xl border border-slate-200 text-center space-y-4">
+      <div id="voterSuccessSection" style="display: none;" class="max-w-lg mx-auto my-12 bg-white p-8 rounded-2xl shadow-xl border border-slate-200 text-center space-y-4">
         <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-4xl">
           <i class="fa-solid fa-circle-check"></i>
         </div>
         <h2 class="text-2xl font-bold text-slate-800">Suara Berhasil Terkirim!</h2>
         <p class="text-slate-600 text-sm">Terima kasih telah berpartisipasi dalam Pemilihan Ketua OSIS SMPN 12 Banjarbaru. Token Anda sekarang telah ditutup secara otomatis untuk menjaga kerahasian dan integritas data.</p>
         <div class="pt-4">
-          <button onclick="logoutVoter()" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl text-sm transition-all">
+          <button type="button" onclick="logoutVoter()" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl text-sm transition-all cursor-pointer">
             Kembali ke Halaman Login
           </button>
         </div>
@@ -121,7 +148,7 @@
     </section>
 
     <!-- ==================== VIEW 2: ADMIN PANEL ==================== -->
-    <section id="viewAdmin" class="hidden space-y-6">
+    <section id="viewAdmin" style="display: none;" class="space-y-6">
       
       <!-- STATISTIK BANNER -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -173,7 +200,7 @@
               <h3 class="font-bold text-lg text-slate-800">Quick Count Real-Time</h3>
               <p class="text-xs text-slate-400">Hasil Perolehan Suara Pasangan Calon Ketua & Wakil Ketua OSIS</p>
             </div>
-            <button onclick="fetchCandidates(); fetchVoters();" class="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-semibold">
+            <button type="button" onclick="fetchCandidates(); fetchVoters();" class="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-semibold cursor-pointer">
               <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh Data
             </button>
           </div>
@@ -190,7 +217,7 @@
             <label class="block text-xs font-bold text-slate-500 uppercase">Kontrol Sesi Pemungutan Suara</label>
             <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border">
               <span id="sessionStatusBadge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">SESI DIBUKA</span>
-              <button id="toggleSessionBtn" onclick="toggleVotingSession()" class="text-xs bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-lg transition-all">
+              <button type="button" id="toggleSessionBtn" onclick="toggleVotingSession()" class="text-xs bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer">
                 Tutup Sesi
               </button>
             </div>
@@ -198,7 +225,7 @@
 
           <div class="space-y-3 pt-2">
             <label class="block text-xs font-bold text-slate-500 uppercase">Aksi Cepat Data</label>
-            <button onclick="resetAllVotes()" class="w-full py-2.5 px-4 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 font-bold text-xs rounded-xl flex items-center justify-center gap-2">
+            <button type="button" onclick="resetAllVotes()" class="w-full py-2.5 px-4 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer">
               <i class="fa-solid fa-trash-arrow-up"></i> Reset Seluruh Suara
             </button>
           </div>
@@ -212,7 +239,7 @@
             <h3 class="font-bold text-lg text-slate-800">Daftar Pemilih Tetap (DPT) & Token</h3>
             <p class="text-xs text-slate-400">Kelola token unik dan status memilih siswa</p>
           </div>
-          <button onclick="openAddVoterModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow">
+          <button type="button" onclick="openAddVoterModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer">
             <i class="fa-solid fa-plus me-1"></i> Tambah Pemilih Baru
           </button>
         </div>
@@ -242,11 +269,11 @@
   <!-- ==================== MODALS ==================== -->
   
   <!-- MODAL VISI MISI -->
-  <div id="modalVisiMisi" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+  <div id="modalVisiMisi" style="display: none;" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b pb-3">
         <h3 id="modalPaslonTitle" class="font-bold text-lg text-slate-800">Detail Paslon</h3>
-        <button onclick="closeModal('modalVisiMisi')" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        <button type="button" onclick="closeModal('modalVisiMisi')" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
       </div>
       <div class="space-y-4 max-h-[60vh] overflow-y-auto">
         <div>
@@ -259,13 +286,13 @@
         </div>
       </div>
       <div class="pt-3 border-t flex justify-end">
-        <button onclick="closeModal('modalVisiMisi')" class="px-5 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-300">Tutup</button>
+        <button type="button" onclick="closeModal('modalVisiMisi')" class="px-5 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-300 cursor-pointer">Tutup</button>
       </div>
     </div>
   </div>
 
   <!-- MODAL KONFIRMASI COBLOS -->
-  <div id="modalConfirmVote" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+  <div id="modalConfirmVote" style="display: none;" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl text-center">
       <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto text-3xl">
         <i class="fa-solid fa-triangle-exclamation"></i>
@@ -274,18 +301,18 @@
       <p class="text-sm text-slate-600">Apakah Anda yakin ingin memberikan suara kepada <strong id="confirmPaslonName" class="text-indigo-600">Paslon</strong>?</p>
       <p class="text-xs text-slate-400 italic">Pilihan tidak dapat diubah setelah tombol konfirmasi ditekan.</p>
       <div class="flex gap-3 pt-2">
-        <button onclick="closeModal('modalConfirmVote')" class="flex-1 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-200">Batal</button>
-        <button id="btnSubmitVote" onclick="submitVote()" class="flex-1 py-2.5 bg-indigo-600 text-white font-bold rounded-xl text-xs shadow hover:bg-indigo-700">Ya, Kirim Suara</button>
+        <button type="button" onclick="closeModal('modalConfirmVote')" class="flex-1 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-200 cursor-pointer">Batal</button>
+        <button type="button" id="btnSubmitVote" onclick="submitVote()" class="flex-1 py-2.5 bg-indigo-600 text-white font-bold rounded-xl text-xs shadow hover:bg-indigo-700 cursor-pointer">Ya, Kirim Suara</button>
       </div>
     </div>
   </div>
 
   <!-- MODAL TAMBAH PEMILIH -->
-  <div id="modalAddVoter" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+  <div id="modalAddVoter" style="display: none;" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b pb-3">
         <h3 class="font-bold text-lg text-slate-800">Tambah Pemilih (DPT)</h3>
-        <button onclick="closeModal('modalAddVoter')" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        <button type="button" onclick="closeModal('modalAddVoter')" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
       </div>
       <div class="space-y-3">
         <div>
@@ -298,19 +325,18 @@
         </div>
       </div>
       <div class="flex gap-2 pt-3 justify-end">
-        <button onclick="closeModal('modalAddVoter')" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">Batal</button>
-        <button onclick="saveNewVoter()" class="px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl text-xs shadow">Simpan & Generate Token</button>
+        <button type="button" onclick="closeModal('modalAddVoter')" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer">Batal</button>
+        <button type="button" onclick="saveNewVoter()" class="px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl text-xs shadow cursor-pointer">Simpan & Generate Token</button>
       </div>
     </div>
   </div>
 
-  <!-- JAVASCRIPT LOGIC -->
+  <!-- JAVASCRIPT LOGIC DIRECTLY EMBEDDED -->
   <script>
-    // ================= CONFIG SUPABASE =================
+    // CONFIG SUPABASE
     const SUPABASE_URL = "https://krdbvdoiplmxknvrjhiz.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_Ctmqkt5eZSNv_yy3ujXo2Q_se72S";
     
-    // Inisialisasi Supabase Client
     let supabase = null;
     try {
       if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
@@ -320,7 +346,7 @@
       console.warn("Supabase Init Warning:", e);
     }
 
-    // DATA STATE IN-MEMORY (FALLBACK DEFAULT)
+    // DATA STATE IN-MEMORY (FALLBACK)
     let isSessionOpen = true;
     let currentVoter = null;
     let selectedCandidateId = null;
@@ -356,49 +382,20 @@
 
     let chartInstance = null;
 
-    // INITIALIZATION ON LOAD
-    window.onload = async function() {
+    // INITIALIZATION
+    document.addEventListener('DOMContentLoaded', function() {
       renderCandidates();
       renderVotersTable();
       updateAdminStats();
 
-      try {
-        await fetchCandidates();
-        await fetchVoters();
+      setTimeout(function() {
+        fetchCandidates();
+        fetchVoters();
         subscribeRealtimeVotes();
-      } catch(err) {
-        console.log("Menggunakan data awal lokal sementara:", err);
-      }
-    };
+      }, 200);
+    });
 
-    // ================= SWITCH VIEW (NAVIGASI SANGAT AMAN) =================
-    function switchView(view) {
-      const btnVoter = document.getElementById('btnViewVoter');
-      const btnAdmin = document.getElementById('btnViewAdmin');
-      const viewVoter = document.getElementById('viewVoter');
-      const viewAdmin = document.getElementById('viewAdmin');
-
-      if (!btnVoter || !btnAdmin || !viewVoter || !viewAdmin) return;
-
-      if (view === 'voter') {
-        viewVoter.classList.remove('hidden');
-        viewAdmin.classList.add('hidden');
-        btnVoter.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all bg-white text-indigo-700 shadow";
-        btnAdmin.className = "px-3 py-1.5 text-xs font-semibold text-indigo-200 hover:text-white rounded-lg transition-all";
-      } else {
-        viewVoter.classList.add('hidden');
-        viewAdmin.classList.remove('hidden');
-        btnAdmin.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all bg-white text-indigo-700 shadow";
-        btnVoter.className = "px-3 py-1.5 text-xs font-semibold text-indigo-200 hover:text-white rounded-lg transition-all";
-        
-        setTimeout(() => {
-          renderAdminChart();
-          updateAdminStats();
-        }, 50);
-      }
-    }
-
-    // ================= SUPABASE DATABASE API =================
+    // SUPABASE DATABASE API
     async function fetchCandidates() {
       if (!supabase) return;
       try {
@@ -417,7 +414,8 @@
         }));
         
         renderCandidates();
-        if (!document.getElementById('viewAdmin').classList.contains('hidden')) {
+        var vAdmin = document.getElementById('viewAdmin');
+        if (vAdmin && vAdmin.style.display === 'block') {
           renderAdminChart();
         }
       } catch (err) {
@@ -451,19 +449,15 @@
       try {
         supabase
           .channel('public:candidates')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'candidates' }, () => {
-            fetchCandidates();
-          })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'voters' }, () => {
-            fetchVoters();
-          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'candidates' }, function() { fetchCandidates(); })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'voters' }, function() { fetchVoters(); })
           .subscribe();
       } catch(e) {
         console.warn("Realtime error:", e);
       }
     }
 
-    // ================= VOTER LOGIC =================
+    // VOTER LOGIC
     async function loginVoter() {
       if (!isSessionOpen) {
         showCustomToast("Mohon maaf, sesi pemilihan sedang DITUTUP oleh Panitia.", "warning");
@@ -499,23 +493,23 @@
       currentVoter = voter;
 
       if (voter.voted) {
-        document.getElementById('voterLoginSection').classList.add('hidden');
-        document.getElementById('voterVotingSection').classList.add('hidden');
-        document.getElementById('voterSuccessSection').classList.remove('hidden');
+        document.getElementById('voterLoginSection').style.display = 'none';
+        document.getElementById('voterVotingSection').style.display = 'none';
+        document.getElementById('voterSuccessSection').style.display = 'block';
       } else {
         document.getElementById('voterNameDisplay').innerText = `${voter.nama} (${voter.kelas})`;
-        document.getElementById('voterLoginSection').classList.add('hidden');
-        document.getElementById('voterVotingSection').classList.remove('hidden');
-        document.getElementById('voterSuccessSection').classList.add('hidden');
+        document.getElementById('voterLoginSection').style.display = 'none';
+        document.getElementById('voterVotingSection').style.display = 'block';
+        document.getElementById('voterSuccessSection').style.display = 'none';
       }
     }
 
     function logoutVoter() {
       currentVoter = null;
       document.getElementById('inputToken').value = '';
-      document.getElementById('voterLoginSection').classList.remove('hidden');
-      document.getElementById('voterVotingSection').classList.add('hidden');
-      document.getElementById('voterSuccessSection').classList.add('hidden');
+      document.getElementById('voterLoginSection').style.display = 'block';
+      document.getElementById('voterVotingSection').style.display = 'none';
+      document.getElementById('voterSuccessSection').style.display = 'none';
     }
 
     function renderCandidates() {
@@ -539,10 +533,10 @@
               <p class="text-xs text-slate-500">Wakil: ${c.wakil}</p>
             </div>
             <div class="space-y-2 pt-2 border-t">
-              <button onclick="openVisiMisiModal(${c.id})" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all">
+              <button type="button" onclick="openVisiMisiModal(${c.id})" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all cursor-pointer">
                 <i class="fa-solid fa-eye me-1"></i> Lihat Visi & Misi
               </button>
-              <button onclick="confirmVote(${c.id})" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95">
+              <button type="button" onclick="confirmVote(${c.id})" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95 cursor-pointer">
                 <i class="fa-solid fa-check me-1"></i> COBLOS PASLON ${c.noUrut}
               </button>
             </div>
@@ -562,8 +556,7 @@
       const misiList = document.getElementById('modalMisiList');
       misiList.innerHTML = candidate.misi.map(m => `<li class="py-0.5">${m}</li>`).join('');
 
-      document.getElementById('modalVisiMisi').classList.remove('hidden');
-      document.getElementById('modalVisiMisi').classList.add('flex');
+      document.getElementById('modalVisiMisi').style.display = 'flex';
     }
 
     function confirmVote(candidateId) {
@@ -571,8 +564,7 @@
       const candidate = candidates.find(c => c.id === candidateId);
       document.getElementById('confirmPaslonName').innerText = `No. ${candidate.noUrut} (${candidate.ketua} & ${candidate.wakil})`;
       
-      document.getElementById('modalConfirmVote').classList.remove('hidden');
-      document.getElementById('modalConfirmVote').classList.add('flex');
+      document.getElementById('modalConfirmVote').style.display = 'flex';
     }
 
     async function submitVote() {
@@ -601,14 +593,14 @@
 
       closeModal('modalConfirmVote');
       
-      document.getElementById('voterVotingSection').classList.add('hidden');
-      document.getElementById('voterSuccessSection').classList.remove('hidden');
+      document.getElementById('voterVotingSection').style.display = 'none';
+      document.getElementById('voterSuccessSection').style.display = 'block';
 
       fetchCandidates();
       fetchVoters();
     }
 
-    // ================= ADMIN LOGIC =================
+    // ADMIN LOGIC
     function updateAdminStats() {
       const total = voters.length;
       const voted = voters.filter(v => v.voted).length;
@@ -678,7 +670,7 @@
               : '<span class="px-2.5 py-1 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full"><i class="fa-solid fa-clock me-1"></i> Belum Memilih</span>'}
           </td>
           <td class="p-3 text-right">
-            <button onclick="deleteVoter(${v.id})" class="text-xs text-red-500 hover:text-red-700 p-1">
+            <button type="button" onclick="deleteVoter(${v.id})" class="text-xs text-red-500 hover:text-red-700 p-1 cursor-pointer">
               <i class="fa-solid fa-trash"></i>
             </button>
           </td>
@@ -696,20 +688,19 @@
         badge.className = "text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700";
         badge.innerText = "SESI DIBUKA";
         btn.innerText = "Tutup Sesi";
-        btn.className = "text-xs bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-lg transition-all";
+        btn.className = "text-xs bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer";
       } else {
         badge.className = "text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700";
         badge.innerText = "SESI DITUTUP";
         btn.innerText = "Buka Sesi";
-        btn.className = "text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition-all";
+        btn.className = "text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer";
       }
     }
 
     function openAddVoterModal() {
       document.getElementById('newVoterName').value = '';
       document.getElementById('newVoterClass').value = '';
-      document.getElementById('modalAddVoter').classList.remove('hidden');
-      document.getElementById('modalAddVoter').classList.add('flex');
+      document.getElementById('modalAddVoter').style.display = 'flex';
     }
 
     async function saveNewVoter() {
@@ -768,12 +759,10 @@
       showCustomToast("Seluruh perolehan suara dan status pemilih telah di-reset!", "info");
     }
 
-    // UTILITY HELPER
     function closeModal(modalId) {
       const modal = document.getElementById(modalId);
       if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+        modal.style.display = 'none';
       }
     }
 
