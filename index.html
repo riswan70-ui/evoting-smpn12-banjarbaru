@@ -28,6 +28,7 @@
     window.isSessionOpen = true;
     window.currentVoter = null;
     window.selectedCandidateId = null;
+    window.editingCandidateId = null;
     window.chartInstance = null;
 
     window.candidates = [
@@ -39,6 +40,7 @@
         fotoKetua: "https://placehold.co/400x400/4f46e5/ffffff?text=Paslon+01",
         visi: "Mewujudkan sekolah inklusif, kreatif, dan berwawasan digital.",
         misi: ["Meningkatkan kegiatan ekskul berbasis teknologi.", "Menyediakan wadah aspirasi siswa secara transparan."],
+        prokja: ["Pengadaan Podcast OSIS Mingguan", "Turnamen E-Sports Antar Kelas"],
         suara: 0
       },
       {
@@ -49,6 +51,7 @@
         fotoKetua: "https://placehold.co/400x400/0284c7/ffffff?text=Paslon+02",
         visi: "Membangun generasi siswa berprestasi, ramah lingkungan, dan berintegritas.",
         misi: ["Mengadakan kegiatan kebersihan & daur ulang sampah.", "Mengaktifkan kembali liga olahraga antar kelas."],
+        prokja: ["Program Bank Sampah Sekolah", "Pentas Seni & Budaya Akhir Semester"],
         suara: 0
       }
     ];
@@ -102,12 +105,118 @@
 
     function refreshData() {
       if (typeof renderCandidates === 'function') renderCandidates();
+      if (typeof renderAdminPaslonCards === 'function') renderAdminPaslonCards();
       if (typeof renderVotersTable === 'function') renderVotersTable();
       if (typeof updateAdminStats === 'function') updateAdminStats();
       if (typeof renderAdminChart === 'function') setTimeout(renderAdminChart, 50);
     }
 
-    // SAVE VOTER
+    function openAddPaslonModal() {
+      window.editingCandidateId = null;
+      document.getElementById('modalPaslonFormTitle').innerText = "Tambah Paslon Baru";
+      document.getElementById('newPaslonNo').value = '';
+      document.getElementById('newPaslonKetua').value = '';
+      document.getElementById('newPaslonWakil').value = '';
+      document.getElementById('newPaslonFoto').value = '';
+      document.getElementById('newPaslonVisi').value = '';
+      document.getElementById('newPaslonMisi').value = '';
+      document.getElementById('newPaslonProkja').value = '';
+      openModal('modalAddPaslon');
+    }
+
+    function openEditPaslonModal(candId) {
+      var cand = window.candidates.find(function(c){ return c.id === candId; });
+      if (!cand) return;
+
+      window.editingCandidateId = candId;
+      document.getElementById('modalPaslonFormTitle').innerText = "Edit Paslon No. " + cand.noUrut;
+      document.getElementById('newPaslonNo').value = parseInt(cand.noUrut);
+      document.getElementById('newPaslonKetua').value = cand.ketua;
+      document.getElementById('newPaslonWakil').value = cand.wakil;
+      document.getElementById('newPaslonFoto').value = cand.fotoKetua.includes('placehold.co') ? '' : cand.fotoKetua;
+      document.getElementById('newPaslonVisi').value = cand.visi;
+      document.getElementById('newPaslonMisi').value = (cand.misi || []).join('\n');
+      document.getElementById('newPaslonProkja').value = (cand.prokja || []).join('\n');
+
+      openModal('modalAddPaslon');
+    }
+
+    // SAVE & EDIT PASLON
+    function executeSavePaslon() {
+      var no = document.getElementById('newPaslonNo').value.trim();
+      var ketua = document.getElementById('newPaslonKetua').value.trim();
+      var wakil = document.getElementById('newPaslonWakil').value.trim();
+      var fotoUrl = document.getElementById('newPaslonFoto').value.trim();
+      var visi = document.getElementById('newPaslonVisi').value.trim();
+      var misiRaw = document.getElementById('newPaslonMisi').value.trim();
+      var prokjaRaw = document.getElementById('newPaslonProkja').value.trim();
+
+      if (!no || !ketua || !wakil) {
+        alert("Nomor Urut, Nama Ketua, dan Nama Wakil wajib diisi!");
+        return;
+      }
+
+      var formattedNo = no.padStart(2, '0');
+      var defaultFoto = "https://placehold.co/400x400/0d9488/ffffff?text=Paslon+" + formattedNo;
+      
+      var misiList = misiRaw ? misiRaw.split('\n').map(function(item){ return item.trim(); }).filter(Boolean) : ["Meningkatkan kualitas siswa."];
+      var prokjaList = prokjaRaw ? prokjaRaw.split('\n').map(function(item){ return item.trim(); }).filter(Boolean) : ["Program kerja unggulan paslon."];
+
+      if (window.editingCandidateId) {
+        // Mode Edit
+        var cand = window.candidates.find(function(c){ return c.id === window.editingCandidateId; });
+        if (cand) {
+          cand.noUrut = formattedNo;
+          cand.ketua = ketua;
+          cand.wakil = wakil;
+          cand.fotoKetua = fotoUrl || defaultFoto;
+          cand.visi = visi || "Mewujudkan OSIS yang berintegritas dan aktif.";
+          cand.misi = misiList;
+          cand.prokja = prokjaList;
+        }
+        alert("BERHASIL DIPERBARUI!\nData Paslon No. " + formattedNo + " telah diubah.");
+      } else {
+        // Mode Tambah Baru
+        var newCand = {
+          id: Date.now(),
+          noUrut: formattedNo,
+          ketua: ketua,
+          wakil: wakil,
+          fotoKetua: fotoUrl || defaultFoto,
+          visi: visi || "Mewujudkan OSIS yang berintegritas dan aktif.",
+          misi: misiList,
+          prokja: prokjaList,
+          suara: 0
+        };
+        if (window.candidates) window.candidates.push(newCand);
+        alert("PASLON BERHASIL DITAMBAHKAN!\nPaslon No. " + formattedNo + " siap dipilih.");
+      }
+
+      window.candidates.sort(function(a, b){ return parseInt(a.noUrut) - parseInt(b.noUrut); });
+
+      refreshData();
+      closeModal('modalAddPaslon');
+
+      if (window.supabaseClient) {
+        try {
+          window.supabaseClient.from('candidates').upsert([{
+            no_urut: parseInt(no),
+            nama_ketua: ketua,
+            nama_wakil: wakil,
+            visi: visi || "Mewujudkan OSIS yang berintegritas.",
+            misi: JSON.stringify(misiList),
+            foto_url: fotoUrl || defaultFoto
+          }]).then(function(){});
+        } catch(e){}
+      }
+    }
+
+    function deletePaslon(candId) {
+      if (!confirm("Apakah Anda yakin ingin menghapus Paslon ini?")) return;
+      window.candidates = window.candidates.filter(function(c){ return c.id !== candId; });
+      refreshData();
+    }
+
     function executeSaveVoter() {
       var nameEl = document.getElementById('newVoterName');
       var classEl = document.getElementById('newVoterClass');
@@ -132,15 +241,8 @@
       if (classEl) classEl.value = '';
 
       alert("BERHASIL DITAMBAHKAN!\n\nNama: " + name + "\nKelas: " + cls + "\nToken: " + generatedToken);
-
-      if (window.supabaseClient) {
-        try {
-          window.supabaseClient.from('voters').insert([{ nama: name, kelas: cls, token: generatedToken, has_voted: false }]).then(function(){});
-        } catch(e){}
-      }
     }
 
-    // BULK IMPORT
     function executeBulkImport() {
       var textarea = document.getElementById('bulkImportInput');
       var rawText = textarea ? textarea.value.trim() : '';
@@ -152,7 +254,6 @@
 
       var lines = rawText.split('\n');
       var count = 0;
-      var newItems = [];
 
       for (var i = 0; i < lines.length; i++) {
         var clean = lines[i].trim();
@@ -168,14 +269,8 @@
         if (nama) {
           var item = { id: Date.now() + i, nama: nama, kelas: kelas, token: token, voted: false };
           if (window.voters) window.voters.push(item);
-          newItems.push({ nama: nama, kelas: kelas, token: token, has_voted: false });
           count++;
         }
-      }
-
-      if (count === 0) {
-        alert("Format data tidak valid!");
-        return;
       }
 
       refreshData();
@@ -183,69 +278,6 @@
       if (textarea) textarea.value = '';
 
       alert("BERHASIL IMPOR!\nTotal " + count + " Pemilih baru telah dibuatkan token otomatis.");
-
-      if (window.supabaseClient && newItems.length > 0) {
-        try {
-          window.supabaseClient.from('voters').insert(newItems).then(function(){});
-        } catch(e){}
-      }
-    }
-
-    // SAVE PASLON (>2 PASLON + FOTO)
-    function executeSavePaslon() {
-      var no = document.getElementById('newPaslonNo').value.trim();
-      var ketua = document.getElementById('newPaslonKetua').value.trim();
-      var wakil = document.getElementById('newPaslonWakil').value.trim();
-      var visi = document.getElementById('newPaslonVisi').value.trim();
-      var fotoUrl = document.getElementById('newPaslonFoto').value.trim();
-
-      if (!no || !ketua || !wakil) {
-        alert("Nomor Urut, Nama Ketua, dan Nama Wakil wajib diisi!");
-        return;
-      }
-
-      var formattedNo = no.padStart(2, '0');
-      var defaultFoto = "https://placehold.co/400x400/0d9488/ffffff?text=Paslon+" + formattedNo;
-      
-      var newCand = {
-        id: Date.now(),
-        noUrut: formattedNo,
-        ketua: ketua,
-        wakil: wakil,
-        fotoKetua: fotoUrl || defaultFoto,
-        visi: visi || "Mewujudkan OSIS yang berintegritas dan aktif.",
-        misi: ["Program unggulan " + ketua],
-        suara: 0
-      };
-
-      if (window.candidates) {
-        window.candidates.push(newCand);
-        window.candidates.sort(function(a, b){ return parseInt(a.noUrut) - parseInt(b.noUrut); });
-      }
-
-      refreshData();
-      closeModal('modalAddPaslon');
-
-      document.getElementById('newPaslonNo').value = '';
-      document.getElementById('newPaslonKetua').value = '';
-      document.getElementById('newPaslonWakil').value = '';
-      document.getElementById('newPaslonVisi').value = '';
-      document.getElementById('newPaslonFoto').value = '';
-
-      alert("PASLON BERHASIL DITAMBAHKAN!\nPaslon No. " + formattedNo + " (" + ketua + " & " + wakil + ") siap dipilih.");
-
-      if (window.supabaseClient) {
-        try {
-          window.supabaseClient.from('candidates').insert([{
-            no_urut: parseInt(no),
-            nama_ketua: ketua,
-            nama_wakil: wakil,
-            visi: visi || "Mewujudkan OSIS yang berintegritas.",
-            misi: JSON.stringify(["Program unggulan"]),
-            foto_url: fotoUrl || defaultFoto
-          }]).then(function(){});
-        } catch(e){}
-      }
     }
   </script>
 </head>
@@ -400,7 +432,7 @@
               <p class="text-xs text-slate-400">Hasil Perolehan Suara Pasangan Calon Ketua & Wakil Ketua OSIS</p>
             </div>
             <div class="flex gap-2">
-              <button type="button" onclick="openModal('modalAddPaslon')" class="text-xs bg-indigo-600 text-white hover:bg-indigo-700 px-3 py-1.5 rounded-lg font-semibold cursor-pointer">
+              <button type="button" onclick="openAddPaslonModal()" class="text-xs bg-indigo-600 text-white hover:bg-indigo-700 px-3 py-1.5 rounded-lg font-semibold cursor-pointer">
                 <i class="fa-solid fa-plus me-1"></i> Tambah Paslon
               </button>
               <button type="button" onclick="refreshData()" class="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-semibold cursor-pointer">
@@ -433,6 +465,23 @@
               <i class="fa-solid fa-trash-arrow-up"></i> Reset Seluruh Suara
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- KARTU MANAJEMEN EDIT PASLON -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <div class="flex justify-between items-center border-b pb-3">
+          <div>
+            <h3 class="font-bold text-lg text-slate-800">Manajemen Pasangan Calon (Paslon)</h3>
+            <p class="text-xs text-slate-400">Edit visi, misi, program kerja, atau kelola daftar kandidat</p>
+          </div>
+          <button type="button" onclick="openAddPaslonModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer">
+            <i class="fa-solid fa-plus me-1"></i> Tambah Paslon Baru
+          </button>
+        </div>
+
+        <div id="adminPaslonList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Disuntik via JS -->
         </div>
       </div>
 
@@ -477,7 +526,7 @@
 
   <!-- ==================== MODALS ==================== -->
   
-  <!-- MODAL VISI MISI -->
+  <!-- MODAL VISI MISI & PROGRAM KERJA -->
   <div id="modalVisiMisi" style="display: none;" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center border-b pb-3">
@@ -486,12 +535,16 @@
       </div>
       <div class="space-y-4 max-h-[60vh] overflow-y-auto">
         <div>
-          <h4 class="text-xs font-bold uppercase text-indigo-600 tracking-wider">Visi Utama</h4>
+          <h4 class="text-xs font-bold uppercase text-indigo-600 tracking-wider"><i class="fa-solid fa-bullseye me-1"></i> Visi Utama</h4>
           <p id="modalVisiText" class="text-sm text-slate-700 mt-1 italic bg-slate-50 p-3 rounded-xl border border-slate-100"></p>
         </div>
         <div>
-          <h4 class="text-xs font-bold uppercase text-indigo-600 tracking-wider">Misi & Program Kerja</h4>
-          <ul id="modalMisiList" class="text-sm text-slate-700 mt-1 list-disc list-inside space-y-1"></ul>
+          <h4 class="text-xs font-bold uppercase text-indigo-600 tracking-wider"><i class="fa-solid fa-list-check me-1"></i> Misi Paslon</h4>
+          <ul id="modalMisiList" class="text-sm text-slate-700 mt-1 list-disc list-inside space-y-1 bg-indigo-50/50 p-3 rounded-xl border border-indigo-100"></ul>
+        </div>
+        <div>
+          <h4 class="text-xs font-bold uppercase text-emerald-600 tracking-wider"><i class="fa-solid fa-briefcase me-1"></i> Program Kerja Utama</h4>
+          <ul id="modalProkjaList" class="text-sm text-slate-700 mt-1 list-disc list-inside space-y-1 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100"></ul>
         </div>
       </div>
       <div class="pt-3 border-t flex justify-end">
@@ -562,38 +615,55 @@
     </div>
   </div>
 
-  <!-- MODAL TAMBAH PASLON BARU -->
+  <!-- MODAL TAMBAH & EDIT PASLON -->
   <div id="modalAddPaslon" style="display: none;" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b pb-3">
-        <h3 class="font-bold text-lg text-slate-800">Tambah Paslon Baru</h3>
+        <h3 id="modalPaslonFormTitle" class="font-bold text-lg text-slate-800">Tambah / Edit Paslon</h3>
         <button type="button" onclick="closeModal('modalAddPaslon')" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
       </div>
-      <div class="space-y-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">Nomor Urut Paslon</label>
-          <input type="number" id="newPaslonNo" placeholder="Contoh: 3" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+      <div class="space-y-3 text-xs">
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-500 mb-1">No. Urut Paslon</label>
+            <input type="number" id="newPaslonNo" placeholder="Contoh: 3" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <div class="col-span-2">
+            <label class="block font-bold text-slate-500 mb-1">URL Foto Paslon (Opsional)</label>
+            <input type="text" id="newPaslonFoto" placeholder="https://..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
         </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">Nama Calon Ketua OSIS</label>
-          <input type="text" id="newPaslonKetua" placeholder="Nama Calon Ketua" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-500 mb-1">Nama Calon Ketua</label>
+            <input type="text" id="newPaslonKetua" placeholder="Nama Calon Ketua" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-500 mb-1">Nama Calon Wakil</label>
+            <input type="text" id="newPaslonWakil" placeholder="Nama Calon Wakil" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
         </div>
+
         <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">Nama Calon Wakil OSIS</label>
-          <input type="text" id="newPaslonWakil" placeholder="Nama Calon Wakil" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          <label class="block font-bold text-slate-500 mb-1">Visi Utama Paslon</label>
+          <textarea id="newPaslonVisi" rows="2" placeholder="Tuliskan visi utama kandidat di sini..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
         </div>
+
         <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">URL Foto Paslon (Opsional)</label>
-          <input type="text" id="newPaslonFoto" placeholder="https://..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          <label class="block font-bold text-indigo-600 mb-1">Misi Paslon (Gunakan Baris Baru per Misi)</label>
+          <textarea id="newPaslonMisi" rows="3" placeholder="1. Meningkatkan kedisiplinan siswa&#10;2. Mengembangkan bakat IT dan Olahraga" class="w-full px-3 py-2 border border-indigo-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
         </div>
+
         <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">Visi Paslon</label>
-          <textarea id="newPaslonVisi" rows="2" placeholder="Visi utama kandidat..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+          <label class="block font-bold text-emerald-600 mb-1">Program Kerja Utama (Gunakan Baris Baru per Program)</label>
+          <textarea id="newPaslonProkja" rows="3" placeholder="- Podcast Sekolah Mingguan&#10;- Pentas Seni Akhir Semester" class="w-full px-3 py-2 border border-emerald-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"></textarea>
         </div>
       </div>
-      <div class="flex gap-2 pt-3 justify-end">
+
+      <div class="flex gap-2 pt-3 justify-end border-t">
         <button type="button" onclick="closeModal('modalAddPaslon')" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer">Batal</button>
-        <button type="button" onclick="executeSavePaslon()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow cursor-pointer">Simpan Paslon Baru</button>
+        <button type="button" onclick="executeSavePaslon()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow cursor-pointer">Simpan Data Paslon</button>
       </div>
     </div>
   </div>
@@ -626,7 +696,7 @@
             </div>
             <div class="space-y-2 pt-2 border-t">
               <button type="button" onclick="openVisiMisiModal(${c.id})" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all cursor-pointer">
-                <i class="fa-solid fa-eye me-1"></i> Lihat Visi & Misi
+                <i class="fa-solid fa-eye me-1"></i> Lihat Visi, Misi & Prokja
               </button>
               <button type="button" onclick="confirmVote(${c.id})" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer">
                 <i class="fa-solid fa-check me-1"></i> COBLOS PASLON ${c.noUrut}
@@ -638,15 +708,49 @@
       });
     }
 
+    function renderAdminPaslonCards() {
+      const container = document.getElementById('adminPaslonList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      window.candidates.forEach(c => {
+        const item = document.createElement('div');
+        item.className = "bg-slate-50 border rounded-xl p-4 flex items-center justify-between gap-3";
+        item.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-lg bg-indigo-600 text-white font-extrabold flex items-center justify-center text-sm">
+              ${c.noUrut}
+            </div>
+            <div>
+              <h4 class="font-bold text-xs text-slate-800">${c.ketua} & ${c.wakil}</h4>
+              <p class="text-[11px] text-slate-400 truncate max-w-[150px]">${c.visi}</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-1">
+            <button type="button" onclick="openEditPaslonModal(${c.id})" class="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg text-xs font-bold cursor-pointer" title="Edit Paslon">
+              <i class="fa-solid fa-pen-to-square"></i> Edit
+            </button>
+            <button type="button" onclick="deletePaslon(${c.id})" class="p-2 text-red-500 hover:bg-red-100 rounded-lg text-xs font-bold cursor-pointer" title="Hapus Paslon">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
     function openVisiMisiModal(candidateId) {
       const candidate = window.candidates.find(c => c.id === candidateId);
       if (!candidate) return;
 
-      document.getElementById('modalPaslonTitle').innerText = `Visi & Misi - Paslon No. ${candidate.noUrut}`;
+      document.getElementById('modalPaslonTitle').innerText = `Detail Paslon No. ${candidate.noUrut} (${candidate.ketua} & ${candidate.wakil})`;
       document.getElementById('modalVisiText').innerText = `"${candidate.visi}"`;
       
       const misiList = document.getElementById('modalMisiList');
       misiList.innerHTML = (candidate.misi || []).map(m => `<li class="py-0.5">${m}</li>`).join('');
+
+      const prokjaList = document.getElementById('modalProkjaList');
+      prokjaList.innerHTML = (candidate.prokja || ["Belum ada program kerja spesifik."]).map(p => `<li class="py-0.5">${p}</li>`).join('');
 
       openModal('modalVisiMisi');
     }
@@ -678,15 +782,6 @@
 
       refreshData();
       alert("SUARA BERHASIL TERKIRIM!\nTerima kasih, suara Anda telah dihitung.");
-
-      if (window.supabaseClient) {
-        try {
-          window.supabaseClient.rpc('submit_vote', {
-            voter_token: window.currentVoter.token,
-            target_candidate_id: window.selectedCandidateId
-          }).then(function(){});
-        } catch(e){}
-      }
     }
 
     function loginVoter() {
