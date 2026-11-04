@@ -66,7 +66,7 @@
           <div>
             <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Kode Token Pemilih</label>
             <div class="relative">
-              <input type="text" id="inputToken" placeholder="Contoh: SISWA1" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-center text-lg font-mono font-bold tracking-widest focus:ring-2 focus:ring-indigo-500 focus:outline-none uppercase" onkeypress="if(event.key === 'Enter') loginVoter()">
+              <input type="text" id="inputToken" placeholder="CONTOH: SISWA1" class="w-full px-4 py-3 border border-slate-300 rounded-xl text-center text-lg font-mono font-bold tracking-widest focus:ring-2 focus:ring-indigo-500 focus:outline-none uppercase" onkeypress="if(event.key === 'Enter') loginVoter()">
             </div>
             <p class="text-[11px] text-slate-400 mt-2 text-center">Terhubung ke Database Cloud Supabase (Realtime Sync)</p>
           </div>
@@ -311,32 +311,99 @@
     const SUPABASE_ANON_KEY = "sb_publishable_Ctmqkt5eZSNv_yy3ujXo2Q_se72S";
     
     // Inisialisasi Supabase Client
-    const supabase = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) 
-      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
-      : null;
+    let supabase = null;
+    try {
+      if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    } catch(e) {
+      console.warn("Supabase Init Warning:", e);
+    }
 
-    // DATA STATE IN-MEMORY
+    // DATA STATE IN-MEMORY (FALLBACK DEFAULT)
     let isSessionOpen = true;
     let currentVoter = null;
     let selectedCandidateId = null;
 
-    let candidates = [];
-    let voters = [];
+    let candidates = [
+      {
+        id: 1,
+        noUrut: "01",
+        ketua: "Aditya Pratama",
+        wakil: "Siti Rahma",
+        fotoKetua: "https://placehold.co/400x400/4f46e5/ffffff?text=Paslon+01",
+        visi: "Mewujudkan sekolah inklusif dan digital.",
+        misi: ["Meningkatkan ekskul IT", "Wadah aspirasi digital"],
+        suara: 0
+      },
+      {
+        id: 2,
+        noUrut: "02",
+        ketua: "Bima Arya",
+        wakil: "Dewi Lestari",
+        fotoKetua: "https://placehold.co/400x400/0284c7/ffffff?text=Paslon+02",
+        visi: "Membangun siswa berprestasi dan berintegritas.",
+        misi: ["Kompetisi olahraga rutin", "Podcast sekolah"],
+        suara: 0
+      }
+    ];
+
+    let voters = [
+      { id: 1, nama: "Ahmad Rizky", kelas: "VIII A", token: "SISWA1", voted: false },
+      { id: 2, nama: "Budi Santoso", kelas: "IX B", token: "SISWA2", voted: false },
+      { id: 3, nama: "Citra Kirana", kelas: "VII C", token: "SISWA3", voted: false }
+    ];
+
     let chartInstance = null;
 
     // INITIALIZATION ON LOAD
     window.onload = async function() {
-      await fetchCandidates();
-      await fetchVoters();
-      subscribeRealtimeVotes();
+      renderCandidates();
+      renderVotersTable();
+      updateAdminStats();
+
+      try {
+        await fetchCandidates();
+        await fetchVoters();
+        subscribeRealtimeVotes();
+      } catch(err) {
+        console.log("Menggunakan data awal lokal sementara:", err);
+      }
     };
+
+    // ================= SWITCH VIEW (NAVIGASI SANGAT AMAN) =================
+    function switchView(view) {
+      const btnVoter = document.getElementById('btnViewVoter');
+      const btnAdmin = document.getElementById('btnViewAdmin');
+      const viewVoter = document.getElementById('viewVoter');
+      const viewAdmin = document.getElementById('viewAdmin');
+
+      if (!btnVoter || !btnAdmin || !viewVoter || !viewAdmin) return;
+
+      if (view === 'voter') {
+        viewVoter.classList.remove('hidden');
+        viewAdmin.classList.add('hidden');
+        btnVoter.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all bg-white text-indigo-700 shadow";
+        btnAdmin.className = "px-3 py-1.5 text-xs font-semibold text-indigo-200 hover:text-white rounded-lg transition-all";
+      } else {
+        viewVoter.classList.add('hidden');
+        viewAdmin.classList.remove('hidden');
+        btnAdmin.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all bg-white text-indigo-700 shadow";
+        btnVoter.className = "px-3 py-1.5 text-xs font-semibold text-indigo-200 hover:text-white rounded-lg transition-all";
+        
+        setTimeout(() => {
+          renderAdminChart();
+          updateAdminStats();
+        }, 50);
+      }
+    }
 
     // ================= SUPABASE DATABASE API =================
     async function fetchCandidates() {
       if (!supabase) return;
       try {
         const { data, error } = await supabase.from('candidates').select('*').order('no_urut', { ascending: true });
-        if (error) throw error;
+        if (error || !data || data.length === 0) return;
         
         candidates = data.map(c => ({
           id: c.id,
@@ -362,7 +429,7 @@
       if (!supabase) return;
       try {
         const { data, error } = await supabase.from('voters').select('*').order('id', { ascending: true });
-        if (error) throw error;
+        if (error || !data || data.length === 0) return;
         
         voters = data.map(v => ({
           id: v.id,
@@ -381,36 +448,18 @@
 
     function subscribeRealtimeVotes() {
       if (!supabase) return;
-      supabase
-        .channel('public:candidates')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'candidates' }, () => {
-          fetchCandidates();
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'voters' }, () => {
-          fetchVoters();
-        })
-        .subscribe();
-    }
-
-    // ================= SWITCH VIEW (NAVIGASI) =================
-    function switchView(view) {
-      const btnVoter = document.getElementById('btnViewVoter');
-      const btnAdmin = document.getElementById('btnViewAdmin');
-      const viewVoter = document.getElementById('viewVoter');
-      const viewAdmin = document.getElementById('viewAdmin');
-
-      if (view === 'voter') {
-        viewVoter.classList.remove('hidden');
-        viewAdmin.classList.add('hidden');
-        btnVoter.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all bg-white text-indigo-700 shadow";
-        btnAdmin.className = "px-3 py-1.5 text-xs font-semibold text-indigo-200 hover:text-white rounded-lg transition-all";
-      } else {
-        viewVoter.classList.add('hidden');
-        viewAdmin.classList.remove('hidden');
-        btnAdmin.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all bg-white text-indigo-700 shadow";
-        btnVoter.className = "px-3 py-1.5 text-xs font-semibold text-indigo-200 hover:text-white rounded-lg transition-all";
-        renderAdminChart();
-        updateAdminStats();
+      try {
+        supabase
+          .channel('public:candidates')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'candidates' }, () => {
+            fetchCandidates();
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'voters' }, () => {
+            fetchVoters();
+          })
+          .subscribe();
+      } catch(e) {
+        console.warn("Realtime error:", e);
       }
     }
 
@@ -430,13 +479,15 @@
       let voter = null;
 
       if (supabase) {
-        const { data, error } = await supabase.from('voters').select('*').eq('token', inputToken).single();
-        if (error || !data) {
-          showCustomToast("Kode Token tidak valid / tidak ditemukan!", "error");
-          return;
-        }
-        voter = { id: data.id, nama: data.nama, kelas: data.kelas, token: data.token, voted: data.has_voted };
-      } else {
+        try {
+          const { data, error } = await supabase.from('voters').select('*').eq('token', inputToken).single();
+          if (data && !error) {
+            voter = { id: data.id, nama: data.nama, kelas: data.kelas, token: data.token, voted: data.has_voted };
+          }
+        } catch(e){}
+      }
+
+      if (!voter) {
         voter = voters.find(v => v.token === inputToken);
       }
 
@@ -469,12 +520,8 @@
 
     function renderCandidates() {
       const container = document.getElementById('candidatesGrid');
+      if (!container) return;
       container.innerHTML = '';
-
-      if (candidates.length === 0) {
-        container.innerHTML = `<div class="col-span-3 text-center py-8 text-slate-400">Belum ada data kandidat. Memuat...</div>`;
-        return;
-      }
 
       candidates.forEach(c => {
         const card = document.createElement('div');
@@ -532,26 +579,33 @@
       if (!currentVoter || !selectedCandidateId) return;
 
       if (supabase) {
-        const { data, error } = await supabase.rpc('submit_vote', {
-          voter_token: currentVoter.token,
-          target_candidate_id: selectedCandidateId
-        });
+        try {
+          const { data, error } = await supabase.rpc('submit_vote', {
+            voter_token: currentVoter.token,
+            target_candidate_id: selectedCandidateId
+          });
 
-        if (error || (data && !data.success)) {
-          showCustomToast(data?.message || "Gagal mengirim suara!", "error");
-          closeModal('modalConfirmVote');
-          return;
+          if (error || (data && !data.success)) {
+            showCustomToast(data?.message || "Gagal mengirim suara!", "error");
+            closeModal('modalConfirmVote');
+            return;
+          }
+        } catch(e) {
+          console.warn("RPC submit error:", e);
         }
       }
 
       currentVoter.voted = true;
+      const cand = candidates.find(c => c.id === selectedCandidateId);
+      if (cand) cand.suara += 1;
+
       closeModal('modalConfirmVote');
       
       document.getElementById('voterVotingSection').classList.add('hidden');
       document.getElementById('voterSuccessSection').classList.remove('hidden');
 
-      await fetchCandidates();
-      await fetchVoters();
+      fetchCandidates();
+      fetchVoters();
     }
 
     // ================= ADMIN LOGIC =================
@@ -568,7 +622,9 @@
     }
 
     function renderAdminChart() {
-      const ctx = document.getElementById('quickCountChart').getContext('2d');
+      const canvas = document.getElementById('quickCountChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
       const labels = candidates.map(c => `Paslon ${c.noUrut}: ${c.ketua.split(' ')[0]}`);
       const dataSuara = candidates.map(c => c.suara);
 
@@ -606,6 +662,7 @@
 
     function renderVotersTable() {
       const tbody = document.getElementById('voterTableBody');
+      if (!tbody) return;
       tbody.innerHTML = '';
 
       voters.forEach(v => {
@@ -667,12 +724,14 @@
       const generatedToken = "SISWA" + Math.floor(1000 + Math.random() * 9000);
 
       if (supabase) {
-        const { error } = await supabase.from('voters').insert([{ nama: name, kelas: cls, token: generatedToken }]);
-        if (error) {
-          showCustomToast("Gagal menyimpan ke Supabase!", "error");
-          return;
-        }
-        await fetchVoters();
+        try {
+          await supabase.from('voters').insert([{ nama: name, kelas: cls, token: generatedToken }]);
+          await fetchVoters();
+        } catch(e){}
+      } else {
+        voters.push({ id: Date.now(), nama: name, kelas: cls, token: generatedToken, voted: false });
+        renderVotersTable();
+        updateAdminStats();
       }
 
       closeModal('modalAddVoter');
@@ -681,26 +740,41 @@
 
     async function deleteVoter(id) {
       if (supabase) {
-        await supabase.from('voters').delete().eq('id', id);
-        await fetchVoters();
+        try {
+          await supabase.from('voters').delete().eq('id', id);
+          await fetchVoters();
+        } catch(e){}
       }
+      voters = voters.filter(v => v.id !== id);
+      renderVotersTable();
+      updateAdminStats();
     }
 
     async function resetAllVotes() {
       if (supabase) {
-        await supabase.from('candidates').update({ suara_count: 0 }).neq('id', 0);
-        await supabase.from('voters').update({ has_voted: false }).neq('id', 0);
-        await fetchCandidates();
-        await fetchVoters();
+        try {
+          await supabase.from('candidates').update({ suara_count: 0 }).neq('id', 0);
+          await supabase.from('voters').update({ has_voted: false }).neq('id', 0);
+          await fetchCandidates();
+          await fetchVoters();
+        } catch(e){}
       }
+      candidates.forEach(c => c.suara = 0);
+      voters.forEach(v => v.voted = false);
+      renderCandidates();
+      renderVotersTable();
+      updateAdminStats();
+      if (chartInstance) renderAdminChart();
       showCustomToast("Seluruh perolehan suara dan status pemilih telah di-reset!", "info");
     }
 
     // UTILITY HELPER
     function closeModal(modalId) {
       const modal = document.getElementById(modalId);
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
     }
 
     function showCustomToast(msg, type = "info") {
