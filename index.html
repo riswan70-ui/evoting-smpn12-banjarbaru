@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -132,14 +133,12 @@
       const [paslonNumber, setPaslonNumber] = useState('');
       const [paslonName, setPaslonName] = useState('');
       const [paslonVision, setPaslonVision] = useState('');
-      const [paslonMisi, setPaslonMisi] = useState('');
-      const [paslonProgra, setPaslonProgra] = useState('');
       const [paslonPhoto, setPaslonPhoto] = useState('');
 
       const [voterName, setVoterName] = useState('');
       const [voterClass, setVoterClass] = useState('');
 
-      // Persistent saves on change - GUARANTEE ALL CHANGES ARE SAVED PERMANENTLY
+      // Persistent saves on change
       useEffect(() => {
         localStorage.setItem('evoting_candidates', JSON.stringify(candidates));
       }, [candidates]);
@@ -169,7 +168,6 @@
         }
       };
 
-      // Simpan Perubahan Pengaturan & Data Permanen
       const handleSaveChanges = () => {
         setSchoolName(tempSchoolName);
         setAppTitle(tempAppTitle);
@@ -211,7 +209,6 @@
       const handleCastVote = (candidateId) => {
         if (!currentVoter) return;
 
-        // Update votes & save state
         const updatedCandidates = candidates.map(c => c.id === candidateId ? { ...c, votes: c.votes + 1 } : c);
         const updatedVoters = voters.map(v => v.id === currentVoter.id ? { ...v, hasVoted: true } : v);
 
@@ -231,7 +228,7 @@
         let updated;
         if (editPaslonData) {
           updated = candidates.map(c => c.id === editPaslonData.id ? {
-            ...c, number: paslonNumber, name: paslonName, vision: paslonVision, photo: paslonPhoto
+            ...c, number: paslonNumber, name: paslonName, vision: paslonVision
           } : c);
         } else {
           const newCand = {
@@ -239,7 +236,6 @@
             number: paslonNumber,
             name: paslonName,
             vision: paslonVision,
-            photo: paslonPhoto,
             votes: 0
           };
           updated = [...candidates, newCand];
@@ -249,7 +245,7 @@
 
         setShowAddPaslonModal(false);
         setEditPaslonData(null);
-        setPaslonNumber(''); setPaslonName(''); setPaslonVision(''); setPaslonPhoto('');
+        setPaslonNumber(''); setPaslonName(''); setPaslonVision('');
         setSaveSuccessMessage('Data Paslon berhasil disimpan!');
         setTimeout(() => setSaveSuccessMessage(''), 3000);
       };
@@ -286,116 +282,29 @@
         localStorage.setItem('evoting_candidates', JSON.stringify(updatedCandidates));
       };
 
-      const handleSaveChanges = () => {
-        setSchoolName(tempSchoolName);
-        setAppTitle(tempAppTitle);
-        localStorage.setItem('evoting_school_name', tempSchoolName);
-        localStorage.setItem('evoting_app_title', tempAppTitle);
-        localStorage.setItem('evoting_candidates', JSON.stringify(candidates));
-        localStorage.setItem('evoting_voters', JSON.stringify(voters));
-        localStorage.setItem('evoting_session_open', JSON.stringify(isSessionOpen));
-
-        if (newAdminPassword.trim() !== '') {
-          setAdminPassword(newAdminPassword);
-          localStorage.setItem('evoting_admin_password', newAdminPassword);
-          setNewAdminPassword('');
-        }
-
-        setSaveSuccessMessage('Seluruh perubahan data berhasil disimpan!');
-        setTimeout(() => setSaveSuccessMessage(''), 3000);
-      };
-
-      const handleTokenSubmit = (e) => {
-        e.preventDefault();
-        if (!isSessionOpen) {
-          setTokenError('Sesi Pemilihan Sedang Ditutup!');
-          return;
-        }
-        const voter = voters.find(v => v.token.toUpperCase() === inputToken.trim().toUpperCase());
-        if (!voter) {
-          setTokenError('Token tidak valid!');
-          return;
-        }
-        if (voter.hasVoted) {
-          setTokenError('Token ini sudah digunakan untuk memilih!');
-          return;
-        }
-        setCurrentVoter(voter);
-        setTokenError('');
-      };
-
-      const handleCastVote = (candidateId) => {
-        if (!currentVoter) return;
-
-        // Update votes
-        setCandidates(prev => prev.map(c => c.id === candidateId ? { ...c, votes: c.votes + 1 } : c));
-        // Mark voter as voted
-        setVoters(prev => prev.map(v => v.id === currentVoter.id ? { ...v, hasVoted: true } : v));
-
-        setCurrentVoter(null);
-        setInputToken('');
-        alert('Terima kasih! Suara Anda berhasil disimpan.');
-      };
-
-      const handleAddOrEditPaslon = (e) => {
-        e.preventDefault();
-        if (editPaslonData) {
-          setCandidates(candidates.map(c => c.id === editPaslonData.id ? {
-            ...c, number: paslonNumber, name: paslonName, vision: paslonVision
-          } : c));
-        } else {
-          const newCand = {
-            id: Date.now().toString(),
-            number: paslonNumber,
-            name: paslonName,
-            vision: paslonVision,
-            votes: 0
-          };
-          setCandidates([...candidates, newCand]);
-        }
-        setShowAddPaslonModal(false);
-        setEditPaslonData(null);
-        setPaslonNumber(''); setPaslonName(''); setPaslonVision('');
-      };
-
-      const handleAddVoter = (e) => {
-        e.preventDefault();
-        const randomToken = 'S12-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-        const newVoter = {
-          id: Date.now().toString(),
-          name: voterName,
-          class: voterClass,
-          token: randomToken,
-          hasVoted: false
-        };
-        setVoters([...voters, newVoter]);
-        setVoterName(''); setVoterClass('');
-        setShowAddVoterModal(false);
-      };
-
-      const handleDeleteVoter = (id) => {
-        setVoters(voters.filter(v => v.id !== id));
-      };
-
-      const handleDeletePaslon = (id) => {
-        setCandidates(candidates.filter(c => c.id !== id));
-      };
-
       const handleResetVotes = () => {
         if (confirm("Apakah Anda yakin ingin mereset seluruh suara & status memilih siswa ke 0?")) {
-          setCandidates(prev => prev.map(c => ({ ...c, votes: 0 })));
-          setVoters(prev => prev.map(v => ({ ...v, hasVoted: false })));
+          const resetC = candidates.map(c => ({ ...c, votes: 0 }));
+          const resetV = voters.map(v => ({ ...v, hasVoted: false }));
+          setCandidates(resetC);
+          setVoters(resetV);
+          localStorage.setItem('evoting_candidates', JSON.stringify(resetC));
+          localStorage.setItem('evoting_voters', JSON.stringify(resetV));
           setSaveSuccessMessage('Seluruh suara telah direset.');
           setTimeout(() => setSaveSuccessMessage(''), 3000);
         }
       };
 
       const totalDPT = voters.length;
-      const votesCount = voters.filter(v => v.hasVoted).reduce((acc, v) => acc + 1, 0);
+      const votesCount = voters.filter(v => v.hasVoted).length;
       const totalVotes = candidates.reduce((acc, c) => acc + c.votes, 0);
       const remainingVoters = totalDPT - votesCount;
       const participationRate = totalDPT > 0 ? ((votesCount / totalDPT) * 100).toFixed(1) : 0;
-      const maxVotes = Math.max(...candidates.map(c => c.votes), 1);
+      
+      // Fixed: Safe calculation without variable identifier collisions
+      const maxVotes = candidates.length > 0 
+        ? candidates.reduce((max, c) => (c.votes > max ? c.votes : max), 1) 
+        : 1;
 
       return (
         <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col">
@@ -479,7 +388,7 @@
               </div>
             </div>
 
-            {/* IF VOTER MODE: LOGIN TOKEN OR BILIK SUARA */}
+            {/* VOTER MODE: TOKEN & BILIK SUARA */}
             {!isAdminLoggedIn && (
               currentVoter ? (
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -546,10 +455,10 @@
               )
             )}
 
-            {/* QUICK COUNT & CONTROL */}
+            {/* QUICK COUNT REAL TIME & CONTROL */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
-              {/* CHART REALTIME */}
+              {/* REAL-TIME CHART */}
               <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                 <div className="flex justify-between items-center mb-6">
                   <div>
@@ -637,7 +546,7 @@
                   )}
                 </div>
 
-                {/* TOMBOL SIMPAN PERUBAHAN & PENGATURAN */}
+                {/* TOMBOL SIMPAN PERUBAHAN */}
                 {isAdminLoggedIn && (
                   <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
                     <h3 className="text-lg font-bold text-slate-800 pb-2 border-b border-slate-100">
@@ -675,7 +584,6 @@
                       />
                     </div>
 
-                    {/* TOMBOL SIMPAN PERUBAHAN UTAMA */}
                     <button
                       onClick={handleSaveChanges}
                       className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm flex items-center justify-center space-x-2 shadow-md transition-all active:scale-95"
@@ -854,7 +762,7 @@
                     <label className="text-xs font-semibold text-slate-600 mb-1 block">Nomor Urut</label>
                     <input
                       type="text"
-                      placeholder="Contoh: 01"
+                      placeholder="Contoh: 03"
                       value={paslonNumber}
                       onChange={(e) => setPaslonNumber(e.target.value)}
                       required
