@@ -132,11 +132,14 @@
       const [paslonNumber, setPaslonNumber] = useState('');
       const [paslonName, setPaslonName] = useState('');
       const [paslonVision, setPaslonVision] = useState('');
+      const [paslonMisi, setPaslonMisi] = useState('');
+      const [paslonProgra, setPaslonProgra] = useState('');
+      const [paslonPhoto, setPaslonPhoto] = useState('');
 
       const [voterName, setVoterName] = useState('');
       const [voterClass, setVoterClass] = useState('');
 
-      // Persistent saves on change
+      // Persistent saves on change - GUARANTEE ALL CHANGES ARE SAVED PERMANENTLY
       useEffect(() => {
         localStorage.setItem('evoting_candidates', JSON.stringify(candidates));
       }, [candidates]);
@@ -164,6 +167,123 @@
         } else {
           setLoginError('Password Admin Salah!');
         }
+      };
+
+      // Simpan Perubahan Pengaturan & Data Permanen
+      const handleSaveChanges = () => {
+        setSchoolName(tempSchoolName);
+        setAppTitle(tempAppTitle);
+        localStorage.setItem('evoting_school_name', tempSchoolName);
+        localStorage.setItem('evoting_app_title', tempAppTitle);
+        localStorage.setItem('evoting_candidates', JSON.stringify(candidates));
+        localStorage.setItem('evoting_voters', JSON.stringify(voters));
+        localStorage.setItem('evoting_session_open', JSON.stringify(isSessionOpen));
+
+        if (newAdminPassword.trim() !== '') {
+          setAdminPassword(newAdminPassword);
+          localStorage.setItem('evoting_admin_password', newAdminPassword);
+          setNewAdminPassword('');
+        }
+
+        setSaveSuccessMessage('Seluruh data dan perubahan berhasil disimpan secara permanen!');
+        setTimeout(() => setSaveSuccessMessage(''), 3500);
+      };
+
+      const handleTokenSubmit = (e) => {
+        e.preventDefault();
+        if (!isSessionOpen) {
+          setTokenError('Sesi Pemilihan Sedang Ditutup!');
+          return;
+        }
+        const voter = voters.find(v => v.token.toUpperCase() === inputToken.trim().toUpperCase());
+        if (!voter) {
+          setTokenError('Token tidak valid!');
+          return;
+        }
+        if (voter.hasVoted) {
+          setTokenError('Token ini sudah digunakan untuk memilih!');
+          return;
+        }
+        setCurrentVoter(voter);
+        setTokenError('');
+      };
+
+      const handleCastVote = (candidateId) => {
+        if (!currentVoter) return;
+
+        // Update votes & save state
+        const updatedCandidates = candidates.map(c => c.id === candidateId ? { ...c, votes: c.votes + 1 } : c);
+        const updatedVoters = voters.map(v => v.id === currentVoter.id ? { ...v, hasVoted: true } : v);
+
+        setCandidates(updatedCandidates);
+        setVoters(updatedVoters);
+        
+        localStorage.setItem('evoting_candidates', JSON.stringify(updatedCandidates));
+        localStorage.setItem('evoting_voters', JSON.stringify(updatedVoters));
+
+        setCurrentVoter(null);
+        setInputToken('');
+        alert('Terima kasih! Suara Anda berhasil disimpan.');
+      };
+
+      const handleAddOrEditPaslon = (e) => {
+        e.preventDefault();
+        let updated;
+        if (editPaslonData) {
+          updated = candidates.map(c => c.id === editPaslonData.id ? {
+            ...c, number: paslonNumber, name: paslonName, vision: paslonVision, photo: paslonPhoto
+          } : c);
+        } else {
+          const newCand = {
+            id: Date.now().toString(),
+            number: paslonNumber,
+            name: paslonName,
+            vision: paslonVision,
+            photo: paslonPhoto,
+            votes: 0
+          };
+          updated = [...candidates, newCand];
+        }
+        setCandidates(updated);
+        localStorage.setItem('evoting_candidates', JSON.stringify(updated));
+
+        setShowAddPaslonModal(false);
+        setEditPaslonData(null);
+        setPaslonNumber(''); setPaslonName(''); setPaslonVision(''); setPaslonPhoto('');
+        setSaveSuccessMessage('Data Paslon berhasil disimpan!');
+        setTimeout(() => setSaveSuccessMessage(''), 3000);
+      };
+
+      const handleAddVoter = (e) => {
+        e.preventDefault();
+        const randomToken = 'S12-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+        const newVoter = {
+          id: Date.now().toString(),
+          name: voterName,
+          class: voterClass,
+          token: randomToken,
+          hasVoted: false
+        };
+        const updatedVoters = [...voters, newVoter];
+        setVoters(updatedVoters);
+        localStorage.setItem('evoting_voters', JSON.stringify(updatedVoters));
+
+        setVoterName(''); setVoterClass('');
+        setShowAddVoterModal(false);
+        setSaveSuccessMessage('Pemilih Baru & Token berhasil ditambahkan!');
+        setTimeout(() => setSaveSuccessMessage(''), 3000);
+      };
+
+      const handleDeleteVoter = (id) => {
+        const updatedVoters = voters.filter(v => v.id !== id);
+        setVoters(updatedVoters);
+        localStorage.setItem('evoting_voters', JSON.stringify(updatedVoters));
+      };
+
+      const handleDeletePaslon = (id) => {
+        const updatedCandidates = candidates.filter(c => c.id !== id);
+        setCandidates(updatedCandidates);
+        localStorage.setItem('evoting_candidates', JSON.stringify(updatedCandidates));
       };
 
       const handleSaveChanges = () => {
